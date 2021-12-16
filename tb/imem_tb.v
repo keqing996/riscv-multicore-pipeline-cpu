@@ -11,7 +11,7 @@ module imem_tb;
     );
 
     initial begin
-        $dumpfile("sim/wave.vcd");
+        $dumpfile("wave.vcd");
         $dumpvars(0, imem_tb);
 
         // Test cases

@@ -25,7 +25,7 @@ module pc_tb;
     // Test logic
     initial begin
         // 1. Initialize and generate wave file
-        $dumpfile("sim/wave.vcd"); // Output path
+        $dumpfile("wave.vcd"); // Output path
         $dumpvars(0, pc_tb);       // Dump all signals
 
         // 2. Reset test
