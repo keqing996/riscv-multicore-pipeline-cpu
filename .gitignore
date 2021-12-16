@@ -1,0 +1,9 @@
+.vscode
+
+# Build artifacts
+sim/
+*.vvp
+*.vcd
+
+# OS generated files
+.DS_Store
