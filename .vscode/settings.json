@@ -1,7 +1,12 @@
 {
     "cSpell.words": [
         "dout",
+        "dumpfile",
+        "dumpvars",
         "endmodule",
-        "posedge"
+        "imem",
+        "negedge",
+        "posedge",
+        "regs"
     ]
 }
