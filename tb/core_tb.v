@@ -44,8 +44,8 @@ module core_tb;
 
     // Monitor
     initial begin
-        $monitor("Time=%0t | PC=%h | Instr=%h | Op=%b | rd=%d | rs1_d=%h | rs2_d=%h | we=%b | wd=%h", 
-                 $time, pc_addr, instr, u_core.opcode, u_core.rd, u_core.rs1_data, u_core.rs2_data, u_core.reg_write, u_core.wdata);
+        $monitor("Time=%0t | PC=%h | Instr=%h | Op=%b | rd=%d | rs1_d=%h | imm=%h | alu_res=%h | we=%b", 
+                 $time, pc_addr, instr, u_core.opcode, u_core.rd, u_core.rs1_data, u_core.imm, u_core.alu_result, u_core.reg_write);
     end
 
 endmodule

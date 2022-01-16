@@ -31,6 +31,15 @@ module core (
     wire [31:0] rs1_data;
     wire [31:0] rs2_data;
 
+    // ALU signals
+    wire [31:0] alu_result;
+    wire zero_flag;
+    wire [3:0] alu_ctrl;
+    wire [31:0] alu_src_b; // MUX output for ALU operand B
+
+    // ImmGen signals
+    wire [31:0] imm;
+
     // Instantiate Decoder
     decoder u_decoder (
         .instr(instr),
@@ -60,14 +69,38 @@ module core (
         .rs2_data(rs2_data)
     );
 
+    // Instantiate Immediate Generator
+    imm_gen u_imm_gen (
+        .instr(instr),
+        .imm(imm)
+    );
+
+    // ALU Source B MUX
+    // If I-type, S-type, U-type, J-type (basically anything not R-type or Branch), use Immediate
+    // Note: Branch comparison uses registers, so it needs rs2.
+    // For now, let's simplify: if is_i_type, use imm.
+    assign alu_src_b = (is_i_type || is_s_type || is_u_type || is_j_type) ? imm : rs2_data;
+
+    // Instantiate ALU
+    alu u_alu (
+        .a(rs1_data),
+        .b(alu_src_b), 
+        .alu_ctrl(alu_ctrl),
+        .result(alu_result),
+        .zero(zero_flag)
+    );
+
     // Temporary Control Logic (Will be moved to Control Unit later)
     // For now, we only write back for R-type and I-type instructions
     assign reg_write = is_r_type || is_i_type || is_u_type || is_j_type;
 
-    // Temporary Write Back Logic
-    // For now, we just write back a dummy value (e.g., 0xDEADBEEF) to test RegFile write
-    // Later this will come from ALU or Memory
-    assign wdata = 32'hDEADBEEF;
+    // Temporary ALU Control Logic
+    // For now, we just force ADD (0000) to test data path
+    assign alu_ctrl = 4'b0000; 
+
+    // Write Back Logic
+    // Now we write back the ALU result!
+    assign wdata = alu_result;
 
     // Output current PC to IMEM
     assign pc_addr = pc_curr;

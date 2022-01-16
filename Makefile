@@ -18,7 +18,7 @@ imem_sim:
 core_sim:
 	mkdir -p sim
 	cp tb/program.hex sim/program.hex
-	iverilog -o sim/core_tb.vvp -I rtl tb/core_tb.v rtl/core.v rtl/pc.v rtl/imem.v rtl/decoder.v rtl/regfile.v
+	iverilog -o sim/core_tb.vvp -I rtl tb/core_tb.v rtl/core.v rtl/pc.v rtl/imem.v rtl/decoder.v rtl/regfile.v rtl/alu.v rtl/imm_gen.v
 	cd sim && vvp core_tb.vvp
 
 # Clean generated files
