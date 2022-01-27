@@ -40,6 +40,9 @@ module core (
     // ImmGen signals
     wire [31:0] imm;
 
+    // Control signals
+    wire [1:0] alu_op;
+
     // Instantiate Decoder
     decoder u_decoder (
         .instr(instr),
@@ -75,10 +78,16 @@ module core (
         .imm(imm)
     );
 
-    // ALU Source B MUX
-    // If I-type, S-type, U-type, J-type (basically anything not R-type or Branch), use Immediate
-    // Note: Branch comparison uses registers, so it needs rs2.
-    // For now, let's simplify: if is_i_type, use imm.
+    // Instantiate ALU Control
+    alu_control u_alu_control (
+        .alu_op(alu_op),
+        .funct3(funct3),
+        .funct7(funct7),
+        .alu_ctrl(alu_ctrl)
+    );
+
+    // MUX for ALU operand B
+    // I-type/S-type/U-type/J-type use Immediate
     assign alu_src_b = (is_i_type || is_s_type || is_u_type || is_j_type) ? imm : rs2_data;
 
     // Instantiate ALU
@@ -90,23 +99,19 @@ module core (
         .zero(zero_flag)
     );
 
-    // Temporary Control Logic (Will be moved to Control Unit later)
-    // For now, we only write back for R-type and I-type instructions
+    // Write back logic (temporary)
     assign reg_write = is_r_type || is_i_type || is_u_type || is_j_type;
 
-    // Temporary ALU Control Logic
-    // For now, we just force ADD (0000) to test data path
-    assign alu_ctrl = 4'b0000; 
+    // Generate ALU Op (temporary)
+    // 00: LW/SW, 01: Branch, 10: R-type, 11: I-type
+    assign alu_op[1] = is_r_type || is_i_type;
+    assign alu_op[0] = is_b_type || is_i_type;
 
-    // Write Back Logic
-    // Now we write back the ALU result!
+    // Write back data
     assign wdata = alu_result;
 
-    // Output current PC to IMEM
+    // PC update
     assign pc_addr = pc_curr;
-
-    // Simple PC + 4 logic (Fetch next instruction)
-    // This will be replaced by a MUX later for branches/jumps
     assign pc_next = pc_curr + 32'd4;
 
 endmodule
