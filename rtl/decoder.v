@@ -12,7 +12,9 @@ module decoder (
     output wire is_s_type,
     output wire is_b_type,
     output wire is_u_type,
-    output wire is_j_type
+    output wire is_j_type,
+    output wire is_load,  // New: Explicit Load signal
+    output wire is_store  // New: Explicit Store signal
 );
 
     // Field extraction
@@ -23,8 +25,7 @@ module decoder (
     assign rs2    = instr[24:20];
     assign funct7 = instr[31:25];
 
-    // Instruction Type Decoding (Based on Opcode)
-    // Reference: RISC-V Unprivileged Spec
+    // Instruction Type Decoding
     
     // R-type: 0110011 (OP)
     assign is_r_type = (opcode == 7'b0110011);
@@ -43,5 +44,9 @@ module decoder (
 
     // J-type: 1101111 (JAL)
     assign is_j_type = (opcode == 7'b1101111);
+
+    // Specific Opcode Checks
+    assign is_load  = (opcode == 7'b0000011);
+    assign is_store = (opcode == 7'b0100011);
 
 endmodule

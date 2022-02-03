@@ -44,3 +44,20 @@ A simple text file containing hexadecimal numbers.
 
 In Verilog simulations, it is commonly used to initialize memory modules (like RAM or ROM). The system task `$readmemh("file.hex", memory_array)` reads this file and loads the values into the simulated memory array.
 **Usage:** In CPU design, this file acts as the "binary executable" of the software you want the CPU to run. It contains the machine code instructions.
+
+## 5. Why use `+` instead of building an Adder?
+
+In Verilog, we usually write `assign c = a + b;` instead of manually connecting logic gates (AND, OR, XOR) to build a Full Adder.
+
+**Why?**
+
+1.  **Abstraction**: We tell the tool *what* we want (Behavioral), not *how* to build it (Structural).
+
+2.  **Optimization**: Synthesis tools (like Vivado or Design Compiler) are smart. They will automatically choose the best adder circuit (Ripple Carry, Carry Lookahead, etc.) based on your speed and area constraints.
+
+3.  **Readability**: `a + b` is much easier to read than 100 lines of gate connections.
+
+**Hardware Mapping:**
+
+*   On **FPGA**: It maps to dedicated fast "Carry Chain" hardware.
+*   On **ASIC**: It maps to standard cell library adders optimized for your specific clock frequency.
