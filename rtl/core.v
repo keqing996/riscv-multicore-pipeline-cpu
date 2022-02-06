@@ -127,10 +127,21 @@ module core (
     assign alu_op[0] = is_b_type || (is_i_type && !is_load);
 
     // Write back data MUX
-    assign wdata = mem_to_reg ? dmem_rdata : alu_result;
+    assign wdata = mem_to_reg ? dmem_rdata : 
+                   is_j_type ? (pc_curr + 32'd4) : // JAL/JALR write PC+4 to rd
+                   alu_result;
 
-    // PC update
+    // Branch/Jump Logic
+    wire branch_taken = is_b_type && zero_flag; // BEQ: take branch if Zero (TODO: support BNE, BLT etc)
+    wire jump_taken   = is_j_type; // JAL
+
+    // PC Next MUX
+    // Priority: Jump > Branch > Next
+    assign pc_next = jump_taken   ? (pc_curr + imm) : // JAL target = PC + offset
+                     branch_taken ? (pc_curr + imm) : // Branch target = PC + offset
+                     (pc_curr + 32'd4);               // Default next instruction
+
+    // Output current PC to IMEM
     assign pc_addr = pc_curr;
-    assign pc_next = pc_curr + 32'd4;
 
 endmodule
