@@ -38,16 +38,15 @@ module core (
     wire [3:0] alu_ctrl;
     wire [31:0] alu_src_b; // MUX output for ALU operand B
 
-    // DMEM signals
-    wire [31:0] dmem_rdata;
-    wire mem_write;
-    wire mem_to_reg;
-
-    // ImmGen signals
-    wire [31:0] imm;
-
     // Control signals
+    wire branch;
+    wire jump;
+    wire mem_read; // Not used yet (for future)
+    wire mem_to_reg;
     wire [1:0] alu_op;
+    wire mem_write;
+    wire alu_src;
+    wire reg_write;
 
     // Instantiate Decoder
     decoder u_decoder (
@@ -66,6 +65,19 @@ module core (
         .is_j_type(is_j_type),
         .is_load(is_load),
         .is_store(is_store)
+    );
+
+    // Instantiate Control Unit
+    control_unit u_control_unit (
+        .opcode(opcode),
+        .branch(branch),
+        .jump(jump),
+        .mem_read(mem_read),
+        .mem_to_reg(mem_to_reg),
+        .alu_op(alu_op),
+        .mem_write(mem_write),
+        .alu_src(alu_src),
+        .reg_write(reg_write)
     );
 
     // Instantiate Register File
@@ -95,8 +107,7 @@ module core (
     );
 
     // MUX for ALU operand B
-    // I-type/S-type/U-type/J-type use Immediate
-    assign alu_src_b = (is_i_type || is_s_type || is_u_type || is_j_type) ? imm : rs2_data;
+    assign alu_src_b = alu_src ? imm : rs2_data;
 
     // Instantiate ALU
     alu u_alu (
@@ -116,30 +127,18 @@ module core (
         .rdata(dmem_rdata)
     );
 
-    // Control Logic (temporary)
-    assign reg_write = is_r_type || is_i_type || is_u_type || is_j_type; // Load is I-type
-    assign mem_write = is_store;
-    assign mem_to_reg = is_load;
-
-    // Generate ALU Op (temporary)
-    // 00: LW/SW, 01: Branch, 10: R-type, 11: I-type
-    assign alu_op[1] = is_r_type || (is_i_type && !is_load); // Don't use I-type ALU logic for Load (use Add)
-    assign alu_op[0] = is_b_type || (is_i_type && !is_load);
-
     // Write back data MUX
     assign wdata = mem_to_reg ? dmem_rdata : 
-                   is_j_type ? (pc_curr + 32'd4) : // JAL/JALR write PC+4 to rd
+                   jump       ? (pc_curr + 32'd4) : 
                    alu_result;
 
     // Branch/Jump Logic
-    wire branch_taken = is_b_type && zero_flag; // BEQ: take branch if Zero (TODO: support BNE, BLT etc)
-    wire jump_taken   = is_j_type; // JAL
+    wire branch_taken = branch && zero_flag;
 
     // PC Next MUX
-    // Priority: Jump > Branch > Next
-    assign pc_next = jump_taken   ? (pc_curr + imm) : // JAL target = PC + offset
-                     branch_taken ? (pc_curr + imm) : // Branch target = PC + offset
-                     (pc_curr + 32'd4);               // Default next instruction
+    assign pc_next = jump         ? (pc_curr + imm) : 
+                     branch_taken ? (pc_curr + imm) : 
+                     (pc_curr + 32'd4);
 
     // Output current PC to IMEM
     assign pc_addr = pc_curr;
