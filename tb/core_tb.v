@@ -38,7 +38,7 @@ module core_tb;
         rst_n = 1;
 
         // Run simulation for a few cycles
-        #100;
+        #500;
         $finish;
     end
 

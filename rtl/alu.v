@@ -17,6 +17,7 @@ module alu (
     localparam ALU_SRA  = 4'b1101; // Shift Right Arithmetic
     localparam ALU_OR   = 4'b0110;
     localparam ALU_AND  = 4'b0111;
+    localparam ALU_LUI  = 4'b1001; // Load Upper Immediate (Pass B)
 
     always @(*) begin
         case (alu_ctrl)
@@ -30,6 +31,7 @@ module alu (
             ALU_SRA:  result = $signed(a) >>> b[4:0];
             ALU_OR:   result = a | b;
             ALU_AND:  result = a & b;
+            ALU_LUI:  result = b;
             default:  result = 32'b0;
         endcase
     end

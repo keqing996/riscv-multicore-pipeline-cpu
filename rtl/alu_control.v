@@ -1,5 +1,5 @@
 module alu_control (
-    input wire [1:0] alu_op,    // From Main Control (to be implemented)
+    input wire [2:0] alu_op,    // From Main Control (Extended to 3 bits)
     input wire [2:0] funct3,
     input wire [6:0] funct7,
     output reg [3:0] alu_ctrl
@@ -16,18 +16,27 @@ module alu_control (
     localparam ALU_SRA  = 4'b1101;
     localparam ALU_OR   = 4'b0110;
     localparam ALU_AND  = 4'b0111;
+    localparam ALU_LUI  = 4'b1001;
 
     always @(*) begin
         case (alu_op)
-            2'b00: begin // LW, SW (Add)
+            3'b000: begin // LW, SW, AUIPC (Add)
                 alu_ctrl = ALU_ADD;
             end
             
-            2'b01: begin // BEQ, BNE (Sub)
-                alu_ctrl = ALU_SUB;
+            3'b001: begin // Branch
+                case (funct3)
+                    3'b000: alu_ctrl = ALU_SUB;  // BEQ (Sub to check Zero)
+                    3'b001: alu_ctrl = ALU_SUB;  // BNE (Sub to check Zero)
+                    3'b100: alu_ctrl = ALU_SLT;  // BLT (Use SLT)
+                    3'b101: alu_ctrl = ALU_SLT;  // BGE (Use SLT)
+                    3'b110: alu_ctrl = ALU_SLTU; // BLTU (Use SLTU)
+                    3'b111: alu_ctrl = ALU_SLTU; // BGEU (Use SLTU)
+                    default: alu_ctrl = ALU_SUB;
+                endcase
             end
 
-            2'b10: begin // R-type
+            3'b010: begin // R-type
                 case (funct3)
                     3'b000: alu_ctrl = (funct7[5]) ? ALU_SUB : ALU_ADD; // ADD/SUB
                     3'b001: alu_ctrl = ALU_SLL;                         // SLL
@@ -41,7 +50,7 @@ module alu_control (
                 endcase
             end
 
-            2'b11: begin // I-type (Immediate Arithmetic)
+            3'b011: begin // I-type (Immediate Arithmetic)
                 case (funct3)
                     3'b000: alu_ctrl = ALU_ADD;                         // ADDI
                     3'b001: alu_ctrl = ALU_SLL;                         // SLLI
@@ -53,6 +62,10 @@ module alu_control (
                     3'b111: alu_ctrl = ALU_AND;                         // ANDI
                     default: alu_ctrl = ALU_ADD;
                 endcase
+            end
+
+            3'b100: begin // LUI
+                alu_ctrl = ALU_LUI;
             end
 
             default: alu_ctrl = ALU_ADD;

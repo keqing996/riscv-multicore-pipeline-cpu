@@ -46,7 +46,10 @@ module core (
     wire [1:0] alu_op;
     wire mem_write;
     wire alu_src;
-    wire reg_write;
+    // wire reg_write; // Removed duplicate declaration
+
+    wire [31:0] imm;
+    wire [31:0] dmem_rdata;
 
     // Instantiate Decoder
     decoder u_decoder (
@@ -128,15 +131,47 @@ module core (
     );
 
     // Write back data MUX
+    // JAL and JALR both write PC+4 to rd
     assign wdata = mem_to_reg ? dmem_rdata : 
                    jump       ? (pc_curr + 32'd4) : 
                    alu_result;
 
     // Branch/Jump Logic
-    wire branch_taken = branch && zero_flag;
+    reg branch_condition_met;
+    
+    always @(*) begin
+        case (funct3)
+            3'b000: branch_condition_met = zero_flag;          // BEQ
+            3'b001: branch_condition_met = !zero_flag;         // BNE
+            3'b100: branch_condition_met = (alu_result != 0);  // BLT (ALU does SLT, so result is 1 if a < b)
+            3'b101: branch_condition_met = (alu_result == 0);  // BGE (ALU does SLT, so result is 0 if a >= b)
+            3'b110: branch_condition_met = (alu_result != 0);  // BLTU (ALU does SLTU)
+            3'b111: branch_condition_met = (alu_result == 0);  // BGEU (ALU does SLTU)
+            default: branch_condition_met = 0;
+        endcase
+    end
+
+    wire branch_taken = branch && branch_condition_met;
+    
+    // JALR Logic
+    // JALR target = (rs1 + imm) & ~1
+    // Note: In our single cycle implementation, rs1 is available at rs1_data
+    // and imm is available at imm.
+    // We can reuse the ALU to calculate rs1 + imm if we set alu_src_b = imm and alu_ctrl = ADD.
+    // But JALR is an I-type instruction (opcode 1100111).
+    // Let's check if we can just use a dedicated adder or reuse ALU.
+    // For simplicity, let's use a dedicated calculation here to avoid complex ALU control changes for now.
+    wire [31:0] jalr_target = (rs1_data + imm) & 32'hFFFFFFFE;
 
     // PC Next MUX
-    assign pc_next = jump         ? (pc_curr + imm) : 
+    // Priority: JALR > JAL > Branch > Next
+    // Note: We need a signal to distinguish JAL and JALR.
+    // Currently 'jump' is high for JAL. We need to update Control Unit or Decoder.
+    // Let's use opcode check for JALR here for simplicity, or update decoder.
+    wire is_jalr = (opcode == 7'b1100111);
+
+    assign pc_next = is_jalr      ? jalr_target :
+                     jump         ? (pc_curr + imm) : 
                      branch_taken ? (pc_curr + imm) : 
                      (pc_curr + 32'd4);
 
