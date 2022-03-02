@@ -43,9 +43,10 @@ module core (
     wire jump;
     wire mem_read; // Not used yet (for future)
     wire mem_to_reg;
-    wire [1:0] alu_op;
+    wire [2:0] alu_op;
     wire mem_write;
     wire alu_src;
+    wire alu_src_a;
     // wire reg_write; // Removed duplicate declaration
 
     wire [31:0] imm;
@@ -80,7 +81,8 @@ module core (
         .alu_op(alu_op),
         .mem_write(mem_write),
         .alu_src(alu_src),
-        .reg_write(reg_write)
+        .reg_write(reg_write),
+        .alu_src_a(alu_src_a)
     );
 
     // Instantiate Register File
@@ -112,9 +114,12 @@ module core (
     // MUX for ALU operand B
     assign alu_src_b = alu_src ? imm : rs2_data;
 
+    // MUX for ALU operand A
+    wire [31:0] alu_src_a_val = alu_src_a ? pc_curr : rs1_data;
+
     // Instantiate ALU
     alu u_alu (
-        .a(rs1_data),
+        .a(alu_src_a_val),
         .b(alu_src_b), 
         .alu_ctrl(alu_ctrl),
         .result(alu_result),
