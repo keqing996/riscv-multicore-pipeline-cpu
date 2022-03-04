@@ -14,10 +14,14 @@ imem_sim:
 	iverilog -o sim/imem_tb.vvp -I rtl tb/imem_tb.v rtl/imem.v
 	cd sim && vvp imem_tb.vvp
 
+# Software Build
+software:
+	$(MAKE) -C software
+
 # Core Simulation (Fetch Stage)
-core_sim:
+core_sim: software
 	mkdir -p sim
-	cp tb/program.hex sim/program.hex
+	cp software/program.hex sim/program.hex
 	iverilog -o sim/core_tb.vvp -I rtl tb/core_tb.v rtl/core.v rtl/pc.v rtl/imem.v rtl/decoder.v rtl/regfile.v rtl/alu.v rtl/imm_gen.v rtl/alu_control.v rtl/dmem.v rtl/control_unit.v
 	cd sim && vvp core_tb.vvp
 
