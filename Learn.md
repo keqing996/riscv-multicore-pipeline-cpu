@@ -61,3 +61,7 @@ In Verilog, we usually write `assign c = a + b;` instead of manually connecting 
 
 *   On **FPGA**: It maps to dedicated fast "Carry Chain" hardware.
 *   On **ASIC**: It maps to standard cell library adders optimized for your specific clock frequency.
+
+## Software simulation
+
+
