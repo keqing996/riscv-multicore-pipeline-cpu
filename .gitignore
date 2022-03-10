@@ -1,6 +1,7 @@
 .vscode
 
 # Build artifacts
+build/
 sim/
 *.vvp
 *.vcd
