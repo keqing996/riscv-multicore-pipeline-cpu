@@ -126,13 +126,31 @@ module core (
         .zero(zero_flag)
     );
 
+    // Memory Address Decoding
+    // DMEM: 0x0000_0000 - 0x0000_0FFF (4KB)
+    // UART: 0x4000_0000
+    
+    wire is_uart_addr = (alu_result == 32'h40000000);
+    wire is_dmem_addr = (alu_result < 32'h00001000); // Simple check for now
+
+    wire dmem_we = mem_write && is_dmem_addr;
+    wire uart_we = mem_write && is_uart_addr;
+
     // Instantiate Data Memory
     dmem u_dmem (
         .clk(clk),
-        .we(mem_write),
+        .we(dmem_we),
         .addr(alu_result),
         .wdata(rs2_data),
         .rdata(dmem_rdata)
+    );
+
+    // Instantiate UART Simulation Model
+    uart_sim u_uart_sim (
+        .clk(clk),
+        .we(uart_we),
+        .addr(alu_result),
+        .wdata(rs2_data)
     );
 
     // Write back data MUX

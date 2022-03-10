@@ -1,4 +1,20 @@
+#define UART_TX_ADDR 0x40000000
+
+void putchar(char c) {
+    volatile char* uart = (volatile char*)UART_TX_ADDR;
+    *uart = c;
+}
+
+void print(const char* str) {
+    while (*str) {
+        putchar(*str++);
+    }
+}
+
 int main() {
+    print("Hello RISC-V World!\n");
+    print("This is printed via MMIO UART.\n");
+    
     // Simple test: Calculate Fibonacci
     // Write results to memory starting at 0x100 (256)
     
@@ -17,6 +33,8 @@ int main() {
         a = b;
         b = c;
     }
+    
+    print("Fibonacci calculation done.\n");
     
     return 0;
 }
