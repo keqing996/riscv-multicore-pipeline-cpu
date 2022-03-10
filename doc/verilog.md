@@ -32,7 +32,7 @@ During simulation, `vvp` records every time a signal (wire or register) changes 
 
 **Usage** 
 
-You open this file with a waveform viewer (like **GTKWave** or **Surfer**) to visually inspect how signals behave over time. It's your "oscilloscope" for digital logic.
+You open this file with a waveform viewer (like **GTKWave**) to visually inspect how signals behave over time. It's your "oscilloscope" for digital logic.
 
 ## 4. Hex File (`.hex`)
 
@@ -61,7 +61,3 @@ In Verilog, we usually write `assign c = a + b;` instead of manually connecting 
 
 *   On **FPGA**: It maps to dedicated fast "Carry Chain" hardware.
 *   On **ASIC**: It maps to standard cell library adders optimized for your specific clock frequency.
-
-## Software simulation
-
-
