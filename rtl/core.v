@@ -48,6 +48,15 @@ module core (
     wire alu_src;
     wire alu_src_a;
     // wire reg_write; // Removed duplicate declaration
+    
+    // CSR Signals
+    wire csr_we;
+    wire csr_to_reg;
+    wire is_mret;
+    wire is_ecall;
+    wire [31:0] csr_rdata;
+    wire [31:0] mtvec;
+    wire [31:0] mepc;
 
     wire [31:0] imm;
     wire [31:0] dmem_rdata;
@@ -74,6 +83,7 @@ module core (
     // Instantiate Control Unit
     control_unit u_control_unit (
         .opcode(opcode),
+        .funct3(funct3),
         .branch(branch),
         .jump(jump),
         .mem_read(mem_read),
@@ -82,7 +92,36 @@ module core (
         .mem_write(mem_write),
         .alu_src(alu_src),
         .reg_write(reg_write),
-        .alu_src_a(alu_src_a)
+        .alu_src_a(alu_src_a),
+        .csr_we(csr_we),
+        .csr_to_reg(csr_to_reg),
+        .is_mret(is_mret),
+        .is_ecall(is_ecall)
+    );
+
+    // Instantiate CSR File
+    // CSR Address is in imm[11:0] (which corresponds to instr[31:20])
+    wire [11:0] csr_addr = instr[31:20];
+    
+    // Exception Logic (Simplified)
+    // Trigger exception on ECALL
+    // ECALL opcode is SYSTEM (1110011) and funct3=0 and imm=0
+    wire exception_en = (opcode == 7'b1110011) && (funct3 == 3'b000) && (instr[31:20] == 12'b0);
+    wire mret_en      = (opcode == 7'b1110011) && (funct3 == 3'b000) && (instr[31:20] == 12'h302);
+
+    csr_file u_csr_file (
+        .clk(clk),
+        .rst_n(rst_n),
+        .csr_addr(csr_addr),
+        .csr_we(csr_we),
+        .csr_wdata(rs1_data), // CSRRW writes rs1 to CSR
+        .csr_rdata(csr_rdata),
+        .exception_en(exception_en),
+        .exception_pc(pc_curr),
+        .exception_cause(32'd11), // Environment call from M-mode
+        .mret_en(mret_en),
+        .mtvec_out(mtvec),
+        .mepc_out(mepc)
     );
 
     // Instantiate Register File
@@ -155,7 +194,8 @@ module core (
 
     // Write back data MUX
     // JAL and JALR both write PC+4 to rd
-    assign wdata = mem_to_reg ? dmem_rdata : 
+    assign wdata = csr_to_reg ? csr_rdata :
+                   mem_to_reg ? dmem_rdata : 
                    jump       ? (pc_curr + 32'd4) : 
                    alu_result;
 
@@ -187,13 +227,15 @@ module core (
     wire [31:0] jalr_target = (rs1_data + imm) & 32'hFFFFFFFE;
 
     // PC Next MUX
-    // Priority: JALR > JAL > Branch > Next
+    // Priority: Exception > MRET > JALR > JAL > Branch > Next
     // Note: We need a signal to distinguish JAL and JALR.
     // Currently 'jump' is high for JAL. We need to update Control Unit or Decoder.
     // Let's use opcode check for JALR here for simplicity, or update decoder.
     wire is_jalr = (opcode == 7'b1100111);
 
-    assign pc_next = is_jalr      ? jalr_target :
+    assign pc_next = exception_en ? mtvec :       // Trap to Handler
+                     mret_en      ? mepc :        // Return from Handler
+                     is_jalr      ? jalr_target :
                      jump         ? (pc_curr + imm) : 
                      branch_taken ? (pc_curr + imm) : 
                      (pc_curr + 32'd4);
