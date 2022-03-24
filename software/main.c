@@ -6,6 +6,9 @@
 #define CSR_MEPC    0x341
 #define CSR_MCAUSE  0x342
 
+typedef unsigned int uint32_t;
+typedef uint32_t uintptr_t;
+
 void putchar(char c) {
     volatile char* uart = (volatile char*)UART_TX_ADDR;
     *uart = c;
@@ -41,8 +44,8 @@ void csr_write(int csr_num, unsigned int val) {
     }
 }
 
-// Trap Handler
-void trap_handler() {
+// Trap Handler (called from assembly wrapper)
+void c_trap_handler() {
     print("\n!!! TRAP HANDLER !!!\n");
     print("MCAUSE: ");
     // Print hex (simplified)
@@ -54,17 +57,16 @@ void trap_handler() {
     // Increment MEPC to skip the ECALL instruction (otherwise infinite loop)
     unsigned int epc = csr_read(CSR_MEPC);
     csr_write(CSR_MEPC, epc + 4);
-    
-    // MRET
-    asm volatile ("mret");
 }
+
+extern void trap_entry();
 
 int main() {
     print("Hello RISC-V World!\n");
     
     // 1. Setup Trap Vector
     print("Setting up MTVEC...\n");
-    csr_write(CSR_MTVEC, (unsigned int)trap_handler);
+    csr_write(CSR_MTVEC, (uint32_t)(uintptr_t)trap_entry);
     
     // 2. Trigger Exception (ECALL)
     print("Triggering ECALL...\n");
