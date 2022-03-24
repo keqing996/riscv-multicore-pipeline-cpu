@@ -84,6 +84,7 @@ module core (
     control_unit u_control_unit (
         .opcode(opcode),
         .funct3(funct3),
+        .rs1_addr(rs1), // Pass rs1 address
         .branch(branch),
         .jump(jump),
         .mem_read(mem_read),

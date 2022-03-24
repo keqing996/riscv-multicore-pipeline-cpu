@@ -1,6 +1,7 @@
 module control_unit (
     input wire [6:0] opcode,
     input wire [2:0] funct3, // Added funct3 for System instructions
+    input wire [4:0] rs1_addr, // Added rs1_addr for CSR instructions
     output reg branch,
     output reg jump,
     output reg mem_read,
@@ -123,7 +124,18 @@ module control_unit (
                         csr_to_reg = 1;
                     end
                     
-                    // TODO: Add CSRRS, CSRRC
+                    3'b010: begin // CSRRS
+                        reg_write  = 1;
+                        csr_we     = (rs1_addr != 0);
+                        csr_to_reg = 1;
+                    end
+
+                    3'b011: begin // CSRRC
+                        reg_write  = 1;
+                        csr_we     = (rs1_addr != 0);
+                        csr_to_reg = 1;
+                    end
+                    
                     default: begin
                         // Treat as CSRRW for now for testing
                         reg_write  = 1;
