@@ -71,14 +71,6 @@ void c_trap_handler() {
 int main() {
     print("Fibonacci Test\n");
     
-    // Debug Subtraction
-    int x = 13;
-    int y = 10;
-    int z = x - y;
-    print("13 - 10 = ");
-    print_int(z);
-    print("\n");
-    
     int n = 10;
     int a = 0, b = 1, next;
     
