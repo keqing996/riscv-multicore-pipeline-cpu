@@ -62,12 +62,6 @@ void print_int(int val) {
     }
 }
 
-// Dummy trap handler to satisfy linker
-void c_trap_handler() {
-    print("Trap!\n");
-    while(1);
-}
-
 int main() {
     print("Fibonacci Test\n");
     

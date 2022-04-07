@@ -25,7 +25,7 @@ set(RISCV_CFLAGS
 )
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/software/link.ld)
 set(RISCV_LDFLAGS -T ${LINKER_SCRIPT})
-set(HEX_GEN_SCRIPT ${CMAKE_SOURCE_DIR}/software/make_hex.py)
+set(HEX_GEN_SCRIPT ${CMAKE_SOURCE_DIR}/tools/make_hex.py)
 
 # Create software output directory
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/software)
