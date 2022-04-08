@@ -101,6 +101,7 @@ add_custom_target(core_compile_vvp ALL DEPENDS ${SIM_VVP})
 # --- Add Tests ---
 add_riscv_test(csr_exception)
 add_riscv_test(fibonacci)
+add_riscv_test(alu_test)
 
 # Default sim target (runs csr_exception by default)
 add_custom_target(core_sim DEPENDS sim_csr_exception)
