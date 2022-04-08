@@ -32,6 +32,9 @@ module core_tb;
         $dumpfile("wave.vcd");
         $dumpvars(0, core_tb);
 
+        // Load program into IMEM
+        $readmemh("program.hex", u_imem.memory);
+
         // Reset
         rst_n = 0;
         #20;
