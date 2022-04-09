@@ -6,18 +6,18 @@ module dmem (
     output wire [31:0] rdata
 );
 
-    // 4KB Memory
-    reg [31:0] memory [0:1023];
+    // 16KB Memory
+    reg [31:0] memory [0:4095];
 
     // Write (Synchronous)
     always @(posedge clk) begin
         if (we) begin
-            // Word aligned access
-            memory[addr[31:2]] <= wdata;
+            // Word aligned access, masked to 16KB
+            memory[addr[13:2]] <= wdata;
         end
     end
 
     // Read (Asynchronous/Combinational)
-    assign rdata = memory[addr[31:2]];
+    assign rdata = memory[addr[13:2]];
 
 endmodule

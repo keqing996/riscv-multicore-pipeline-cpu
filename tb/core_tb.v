@@ -41,8 +41,15 @@ module core_tb;
         rst_n = 1;
 
         // Run simulation for a few cycles
-        #500000;
+        #1000000;
         $finish;
+    end
+
+    // Debug Monitor
+    always @(posedge clk) begin
+        if (u_core.pc_curr >= 32'h00000f90 && u_core.pc_curr <= 32'h00001060) begin
+             $display("Time: %t, PC: %h, Instr: %h", $time, u_core.pc_curr, instr);
+        end
     end
 
     // Monitor
