@@ -171,7 +171,7 @@ module core (
     // UART: 0x4000_0000
     
     wire is_uart_addr = (alu_result == 32'h40000000);
-    wire is_dmem_addr = (alu_result < 32'h00001000); // Simple check for now
+    wire is_dmem_addr = (alu_result < 32'h00004000); // 16KB DMEM
 
     wire dmem_we = mem_write && is_dmem_addr;
     wire uart_we = mem_write && is_uart_addr;

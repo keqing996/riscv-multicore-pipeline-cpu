@@ -19,6 +19,7 @@ module regfile (
         for (i = 0; i < 32; i = i + 1) begin
             regs[i] = 32'h0;
         end
+        regs[2] = 32'h4000; // Initialize SP to 16KB
     end
 
     // Write operation (Synchronous)

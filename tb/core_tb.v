@@ -46,16 +46,24 @@ module core_tb;
     end
 
     // Debug Monitor
-    always @(posedge clk) begin
-        if (u_core.pc_curr >= 32'h00000f90 && u_core.pc_curr <= 32'h00001060) begin
-             $display("Time: %t, PC: %h, Instr: %h", $time, u_core.pc_curr, instr);
-        end
-    end
+    // always @(posedge clk) begin
+    //     if (u_core.pc_curr >= 32'h00000f90 && u_core.pc_curr <= 32'h00001060) begin
+    //          $display("Time: %t, PC: %h, Instr: %h", $time, u_core.pc_curr, instr);
+    //     end
+    // end
 
     // Monitor
     // initial begin
     //     $monitor("Time=%0t | PC=%h | Instr=%h | Op=%b | rd=%d | rs1_d=%h | imm=%h | alu_res=%h | we=%b | wd=%h", 
     //              $time, pc_addr, instr, u_core.opcode, u_core.rd, u_core.rs1_data, u_core.imm, u_core.alu_result, u_core.reg_write, u_core.wdata);
     // end
+
+    // Debug Monitor for Fibonacci
+    always @(posedge clk) begin
+        if (u_core.pc_curr == 32'h00000360) begin
+             $display("Time: %t, PC: %h, s5(x21)=%h, s11(x27)=%h, Result=%h", 
+                      $time, u_core.pc_curr, u_core.u_regfile.regs[21], u_core.u_regfile.regs[27], u_core.alu_result);
+        end
+    end
 
 endmodule
