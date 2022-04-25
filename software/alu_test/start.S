@@ -3,7 +3,7 @@
 
 _start:
     # Initialize Stack Pointer
-    li sp, 0x1000
+    la sp, _stack_top
 
     # Call main function
     call main
