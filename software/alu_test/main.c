@@ -11,6 +11,55 @@ void print(const char* str) {
     }
 }
 
+// Simple division/modulus for printing (very slow, but works without libgcc)
+unsigned int __udivsi3(unsigned int num, unsigned int den) {
+    unsigned int quot = 0;
+    while (num >= den) {
+        num -= den;
+        quot++;
+    }
+    return quot;
+}
+
+unsigned int __umodsi3(unsigned int num, unsigned int den) {
+    while (num >= den) {
+        num -= den;
+    }
+    return num;
+}
+
+unsigned int udiv(unsigned int num, unsigned int den) {
+    return __udivsi3(num, den);
+}
+
+unsigned int umod(unsigned int num, unsigned int den) {
+    return __umodsi3(num, den);
+}
+
+void print_int(int val) {
+    char buffer[12];
+    int i = 0;
+    if (val == 0) {
+        print("0");
+        return;
+    }
+    
+    if (val < 0) {
+        putchar('-');
+        val = -val;
+    }
+    
+    unsigned int uval = (unsigned int)val;
+    while (uval > 0) {
+        buffer[i++] = umod(uval, 10) + '0';
+        uval = udiv(uval, 10);
+    }
+    
+    while (i > 0) {
+        putchar(buffer[--i]);
+    }
+}
+
 void print_hex(unsigned int val) {
     print("0x");
     for (int i = 7; i >= 0; i--) {
@@ -93,29 +142,36 @@ int main() {
     else print(" [FAIL] Expected 0x1\n");
 
     // 9. Fibonacci Loop Test
+    print("Fib Loop Test (Hex):\n");
     int f0 = 0;
     int f1 = 1;
     int fn;
-    // Seq: 0, 1, 1, 2, 3, 5, 8, 13
-    // i=0: fn=1, f0=1, f1=1
-    // i=1: fn=2, f0=1, f1=2
-    // i=2: fn=3, f0=2, f1=3
-    // i=3: fn=5, f0=3, f1=5
-    // i=4: fn=8, f0=5, f1=8
-    // i=5: fn=13, f0=8, f1=13
     
-    print("Fib Loop Test:\n");
     for (int i = 0; i < 6; i++) {
         fn = f0 + f1;
         f0 = f1;
         f1 = fn;
-        print_hex(f0); print(" + "); print_hex(f1); print(" = "); print_hex(fn); print("\n"); // Debug print
+        print_hex(f0); print(" + "); print_hex(f1); print(" = "); print_hex(fn); print("\n");
     }
     
     print("Fib(7) = ");
     print_hex(f1);
     if (f1 == 13) print(" [PASS]\n");
     else print(" [FAIL] Expected 0xD\n");
+
+    // 10. Fibonacci Series Test (Decimal)
+    print("Fib Series (Decimal): ");
+    int n = 10;
+    int a = 0, b = 1, next;
+    
+    for (int i = 0; i < n; i++) {
+        print_int(a);
+        if (i < n - 1) print(", ");
+        next = a + b;
+        a = b;
+        b = next;
+    }
+    print("\n");
 
     print("ALU Test Done\n");
     return 0;
