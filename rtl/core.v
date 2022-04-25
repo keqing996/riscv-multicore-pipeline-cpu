@@ -171,18 +171,92 @@ module core (
     // UART: 0x4000_0000
     
     wire is_uart_addr = (alu_result == 32'h40000000);
-    wire is_dmem_addr = (alu_result < 32'h00004000); // 16KB DMEM
+    wire is_dmem_addr = (alu_result < 32'h02000000); // 32MB DMEM
 
     wire dmem_we = mem_write && is_dmem_addr;
     wire uart_we = mem_write && is_uart_addr;
 
+    // LSU Logic
+    wire [1:0] addr_offset = alu_result[1:0];
+    reg [3:0] dmem_byte_enable;
+    reg [31:0] dmem_wdata;
+    reg [31:0] dmem_rdata_aligned;
+    wire [31:0] dmem_rdata_raw;
+
+    // Write Data Alignment & Byte Enable
+    always @(*) begin
+        dmem_byte_enable = 4'b0000;
+        dmem_wdata = 32'b0;
+        
+        if (dmem_we) begin
+            case (funct3)
+                3'b000: begin // SB
+                    dmem_wdata = {4{rs2_data[7:0]}};
+                    dmem_byte_enable = 4'b0001 << addr_offset;
+                end
+                3'b001: begin // SH
+                    dmem_wdata = {2{rs2_data[15:0]}};
+                    dmem_byte_enable = 4'b0011 << addr_offset;
+                end
+                3'b010: begin // SW
+                    dmem_wdata = rs2_data;
+                    dmem_byte_enable = 4'b1111;
+                end
+                default: begin // Default to SW
+                    dmem_wdata = rs2_data;
+                    dmem_byte_enable = 4'b1111;
+                end
+            endcase
+        end
+    end
+
+    // Read Data Alignment
+    always @(*) begin
+        case (funct3)
+            3'b000: begin // LB
+                case (addr_offset)
+                    2'b00: dmem_rdata_aligned = {{24{dmem_rdata_raw[7]}}, dmem_rdata_raw[7:0]};
+                    2'b01: dmem_rdata_aligned = {{24{dmem_rdata_raw[15]}}, dmem_rdata_raw[15:8]};
+                    2'b10: dmem_rdata_aligned = {{24{dmem_rdata_raw[23]}}, dmem_rdata_raw[23:16]};
+                    2'b11: dmem_rdata_aligned = {{24{dmem_rdata_raw[31]}}, dmem_rdata_raw[31:24]};
+                endcase
+            end
+            3'b001: begin // LH
+                case (addr_offset[1])
+                    1'b0: dmem_rdata_aligned = {{16{dmem_rdata_raw[15]}}, dmem_rdata_raw[15:0]};
+                    1'b1: dmem_rdata_aligned = {{16{dmem_rdata_raw[31]}}, dmem_rdata_raw[31:16]};
+                endcase
+            end
+            3'b010: begin // LW
+                dmem_rdata_aligned = dmem_rdata_raw;
+            end
+            3'b100: begin // LBU
+                case (addr_offset)
+                    2'b00: dmem_rdata_aligned = {24'b0, dmem_rdata_raw[7:0]};
+                    2'b01: dmem_rdata_aligned = {24'b0, dmem_rdata_raw[15:8]};
+                    2'b10: dmem_rdata_aligned = {24'b0, dmem_rdata_raw[23:16]};
+                    2'b11: dmem_rdata_aligned = {24'b0, dmem_rdata_raw[31:24]};
+                endcase
+            end
+            3'b101: begin // LHU
+                case (addr_offset[1])
+                    1'b0: dmem_rdata_aligned = {16'b0, dmem_rdata_raw[15:0]};
+                    1'b1: dmem_rdata_aligned = {16'b0, dmem_rdata_raw[31:16]};
+                endcase
+            end
+            default: dmem_rdata_aligned = dmem_rdata_raw;
+        endcase
+    end
+
+    assign dmem_rdata = dmem_rdata_aligned;
+
     // Instantiate Data Memory
     dmem u_dmem (
         .clk(clk),
-        .we(dmem_we),
+        .byte_enable(dmem_byte_enable),
         .addr(alu_result),
-        .wdata(rs2_data),
-        .rdata(dmem_rdata)
+        .wdata(dmem_wdata),
+        .rdata(dmem_rdata_raw)
     );
 
     // Instantiate UART Simulation Model

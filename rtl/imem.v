@@ -3,12 +3,12 @@ module imem (
     output wire [31:0] data // Instruction
 );
 
-    // Define memory: 4096 words (16KB)
-    reg [31:0] memory [0:4095];
+    // Define memory: 8M words (32MB)
+    reg [31:0] memory [0:8388607];
 
     // Read logic (Combinational / Asynchronous read)
     // RISC-V instructions are 4-byte aligned.
-    // We use addr[31:2] to index the word array.
-    assign data = memory[addr[31:2]];
+    // We use addr[24:2] to index the word array.
+    assign data = memory[addr[24:2]];
 
 endmodule

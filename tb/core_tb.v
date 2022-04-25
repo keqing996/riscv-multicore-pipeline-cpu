@@ -59,11 +59,12 @@ module core_tb;
     // end
 
     // Debug Monitor for Fibonacci
-    always @(posedge clk) begin
-        if (u_core.pc_curr == 32'h00000360) begin
-             $display("Time: %t, PC: %h, s5(x21)=%h, s11(x27)=%h, Result=%h", 
-                      $time, u_core.pc_curr, u_core.u_regfile.regs[21], u_core.u_regfile.regs[27], u_core.alu_result);
-        end
-    end
+    // always @(posedge clk) begin
+    //     if (u_core.pc_curr == 32'h00000360 || u_core.pc_curr == 32'h00000368) begin
+    //          $display("Time: %t, PC: %h, s5=%h, s11=%h, Res=%h, WData=%h, RD=%d, WE=%b", 
+    //                   $time, u_core.pc_curr, u_core.u_regfile.regs[21], u_core.u_regfile.regs[27], 
+    //                   u_core.alu_result, u_core.wdata, u_core.rd, u_core.reg_write);
+    //     end
+    // end
 
 endmodule
