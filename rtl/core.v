@@ -57,9 +57,12 @@ module core (
     wire [31:0] csr_rdata;
     wire [31:0] mtvec;
     wire [31:0] mepc;
+    wire interrupt_en; // From CSR File
+    wire timer_irq;    // From Timer
 
     wire [31:0] imm;
     wire [31:0] dmem_rdata;
+    wire [31:0] timer_rdata;
 
     // Instantiate Decoder
     decoder u_decoder (
@@ -121,8 +124,10 @@ module core (
         .exception_pc(pc_curr),
         .exception_cause(32'd11), // Environment call from M-mode
         .mret_en(mret_en),
+        .timer_irq(timer_irq),
         .mtvec_out(mtvec),
-        .mepc_out(mepc)
+        .mepc_out(mepc),
+        .interrupt_en(interrupt_en)
     );
 
     // Instantiate Register File
@@ -167,14 +172,17 @@ module core (
     );
 
     // Memory Address Decoding
-    // DMEM: 0x0000_0000 - 0x0000_0FFF (4KB)
+    // DMEM: 0x0000_0000 - 0x01FF_FFFF (32MB)
     // UART: 0x4000_0000
+    // Timer: 0x4000_4000 - 0x4000_400C
     
     wire is_uart_addr = (alu_result == 32'h40000000);
+    wire is_timer_addr = (alu_result >= 32'h40004000 && alu_result <= 32'h4000400C);
     wire is_dmem_addr = (alu_result < 32'h02000000); // 32MB DMEM
 
     wire dmem_we = mem_write && is_dmem_addr;
     wire uart_we = mem_write && is_uart_addr;
+    wire timer_we = mem_write && is_timer_addr;
 
     // LSU Logic
     wire [1:0] addr_offset = alu_result[1:0];
@@ -267,10 +275,23 @@ module core (
         .wdata(rs2_data)
     );
 
+    // Instantiate Timer
+    timer u_timer (
+        .clk(clk),
+        .rst_n(rst_n),
+        .we(timer_we),
+        .addr(alu_result),
+        .wdata(rs2_data),
+        .rdata(timer_rdata),
+        .irq(timer_irq)
+    );
+
     // Write back data MUX
     // JAL and JALR both write PC+4 to rd
+    wire [31:0] mem_rdata_mux = is_timer_addr ? timer_rdata : dmem_rdata;
+
     assign wdata = csr_to_reg ? csr_rdata :
-                   mem_to_reg ? dmem_rdata : 
+                   mem_to_reg ? mem_rdata_mux : 
                    jump       ? (pc_curr + 32'd4) : 
                    alu_result;
 
@@ -302,13 +323,14 @@ module core (
     wire [31:0] jalr_target = (rs1_data + imm) & 32'hFFFFFFFE;
 
     // PC Next MUX
-    // Priority: Exception > MRET > JALR > JAL > Branch > Next
+    // Priority: Reset > Interrupt > Exception > MRET > JALR > JAL > Branch > Next
     // Note: We need a signal to distinguish JAL and JALR.
     // Currently 'jump' is high for JAL. We need to update Control Unit or Decoder.
     // Let's use opcode check for JALR here for simplicity, or update decoder.
     wire is_jalr = (opcode == 7'b1100111);
 
-    assign pc_next = exception_en ? mtvec :       // Trap to Handler
+    assign pc_next = interrupt_en ? mtvec :       // Trap to Handler (Interrupt)
+                     exception_en ? mtvec :       // Trap to Handler (Exception)
                      mret_en      ? mepc :        // Return from Handler
                      is_jalr      ? jalr_target :
                      jump         ? (pc_curr + imm) : 
