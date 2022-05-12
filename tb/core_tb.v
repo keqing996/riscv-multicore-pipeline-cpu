@@ -45,6 +45,15 @@ module core_tb;
         $finish;
     end
 
+    // Simple Trace
+    always @(posedge clk) begin
+        if (rst_n) begin
+            $display("Time: %0t | PC_IF: %h | Instr: %h | Stall: %b | Flush: %b", 
+                     $time, u_core.pc_curr, instr, u_core.stall, u_core.flush_branch);
+        end
+    end
+
+
     // Debug Monitor
     // always @(posedge clk) begin
     //     if (u_core.pc_curr >= 32'h00000f90 && u_core.pc_curr <= 32'h00001060) begin
