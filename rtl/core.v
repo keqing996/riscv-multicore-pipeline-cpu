@@ -43,6 +43,7 @@ module core (
     wire csr_to_reg_id;
     wire is_mret_id;
     wire is_ecall_id;
+    wire is_jalr_id = (opcode == 7'b1100111); // Added
 
     // Hazard / Stall Signals
     wire stall;
@@ -75,6 +76,7 @@ module core (
     reg id_ex_csr_to_reg;
     reg id_ex_is_mret;
     reg id_ex_is_ecall;
+    reg id_ex_is_jalr; // Added
     reg [31:0] id_ex_csr_rdata; // Pass read CSR data to EX/MEM/WB? 
                                 // Actually CSR read happens in ID, so we pass data down.
 
@@ -314,13 +316,40 @@ module core (
             id_ex_mem_write <= mem_write_id;
             id_ex_alu_src <= alu_src_id;
             id_ex_reg_write <= reg_write_id;
+            id_ex_alu_src_a <= csr_we_id;
+            id_ex_csr_we <= 0;
+            id_ex_is_mret <= 0;
+            id_ex_is_ecall <= 0;
+            id_ex_is_jalr <= 0;
+            // Others don't matter if reg_write/mem_write are 0
+        end else begin
+            id_ex_pc <= if_id_pc;
+            id_ex_rs1_data <= rs1_data_id;
+            id_ex_rs2_data <= rs2_data_id;
+            id_ex_imm <= imm_id;
+            id_ex_rs1 <= rs1_id;
+            id_ex_rs2 <= rs2_id;
+            id_ex_rd <= rd_id;
+            id_ex_funct3 <= funct3;
+            id_ex_funct7 <= funct7;
+            // Control
+            id_ex_branch <= branch_id;
+            id_ex_jump <= jump_id;
+            id_ex_mem_read <= mem_read_id;
+            id_ex_mem_to_reg <= mem_to_reg_id;
+            id_ex_alu_op <= alu_op_id;
+            id_ex_mem_write <= mem_write_id;
+            id_ex_alu_src <= alu_src_id;
+            id_ex_reg_write <= reg_write_id;
             id_ex_alu_src_a <= alu_src_a_id;
             id_ex_csr_we <= csr_we_id;
             id_ex_csr_to_reg <= csr_to_reg_id;
             id_ex_is_mret <= is_mret_id;
             id_ex_is_ecall <= is_ecall_id;
+            id_ex_is_jalr <= is_jalr_id;
             id_ex_csr_rdata <= csr_rdata_id;
         end
+    end
     end
 
     // =========================================================================
@@ -361,13 +390,16 @@ module core (
     );
 
     // ALU
+    wire [31:0] alu_out_ex;
     alu u_alu (
         .a(alu_in_a_ex),
         .b(alu_in_b_ex),
         .alu_ctrl(alu_ctrl_ex),
-        .result(alu_result_ex),
+        .result(alu_out_ex),
         .zero(zero_flag_ex)
     );
+
+    assign alu_result_ex = id_ex_jump ? (id_ex_pc + 32'd4) : alu_out_ex;
 
     // Branch Logic
     // Calculate Branch Target
@@ -596,4 +628,11 @@ module core (
                       mem_wb_mem_to_reg ? mem_wb_rdata : 
                       mem_wb_alu_result;
 
+    // Debug
+    always @(posedge clk) begin
+        if (id_ex_jump || flush_trap) begin
+            $display("Time: %0t | Jump/Trap | PC: %h | Target: %h | FlushJump: %b | FlushTrap: %b | Mtvec: %h", 
+                     $time, id_ex_pc, branch_target_ex, flush_jump, flush_trap, mtvec);
+        end
+    end
 endmodule
