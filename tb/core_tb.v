@@ -49,15 +49,20 @@ module core_tb;
     always @(posedge clk) begin
         if ((^u_core.pc_curr === 1'bx) && rst_n) begin
             $display("Time: %0t | ERROR: PC became X!", $time);
-            // $finish; // Don't finish yet, let's see the trace
+            $finish; 
         end
     end
 
     // Trace
     always @(posedge clk) begin
-        if ($time > 1440000) begin
-             $display("Time: %0t | PC: %h | Instr: %h | Stall: %b | Flush: %b | Jump: %b | JALR: %b", 
-                      $time, u_core.pc_curr, instr, u_core.stall, u_core.flush_branch, u_core.id_ex_jump, u_core.id_ex_is_jalr);
+        // Trace logical operations or suspicious results
+        if (u_core.alu_ctrl_ex == 4'b0111 || // AND
+            u_core.alu_ctrl_ex == 4'b0110 || // OR
+            u_core.alu_ctrl_ex == 4'b0100 || // XOR
+            u_core.alu_result_ex == 32'h77000000) begin
+             $display("Time: %0t | PC_EX: %h | ALU_Ctrl: %b | A_in: %h | B_in: %h | Res: %h | RS1_D: %h | RS2_D: %h | Imm: %h | FwdA: %h | FwdB: %h", 
+                      $time, u_core.id_ex_pc, u_core.alu_ctrl_ex, u_core.alu_in_a_ex, u_core.alu_in_b_ex, u_core.alu_result_ex,
+                      u_core.id_ex_rs1_data, u_core.id_ex_rs2_data, u_core.id_ex_imm, u_core.forward_a_val, u_core.forward_b_val);
         end
     end
 

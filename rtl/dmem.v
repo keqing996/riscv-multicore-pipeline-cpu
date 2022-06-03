@@ -9,6 +9,13 @@ module dmem (
     // 32MB Memory
     reg [31:0] memory [0:8388607];
 
+    integer i;
+    initial begin
+        for (i = 0; i < 8388608; i = i + 1) begin
+            memory[i] = 0;
+        end
+    end
+
     wire [22:0] word_addr = addr[24:2];
 
     // Write (Synchronous)
