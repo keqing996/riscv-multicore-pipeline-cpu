@@ -285,6 +285,7 @@ module core (
             id_ex_csr_to_reg <= 0;
             id_ex_is_mret <= 0;
             id_ex_is_ecall <= 0;
+            id_ex_is_jalr <= 0;
             id_ex_csr_rdata <= 0;
         end else if (stall || flush_branch || flush_jump || flush_trap) begin
             // Flush ID/EX (Insert Bubble)
@@ -293,30 +294,6 @@ module core (
             id_ex_mem_read <= 0;
             id_ex_mem_write <= 0;
             id_ex_reg_write <= 0;
-            id_ex_csr_we <= 0;
-            id_ex_is_mret <= 0;
-            id_ex_is_ecall <= 0;
-            // Others don't matter if reg_write/mem_write are 0
-        end else begin
-            id_ex_pc <= if_id_pc;
-            id_ex_rs1_data <= rs1_data_id;
-            id_ex_rs2_data <= rs2_data_id;
-            id_ex_imm <= imm_id;
-            id_ex_rs1 <= rs1_id;
-            id_ex_rs2 <= rs2_id;
-            id_ex_rd <= rd_id;
-            id_ex_funct3 <= funct3;
-            id_ex_funct7 <= funct7;
-            // Control
-            id_ex_branch <= branch_id;
-            id_ex_jump <= jump_id;
-            id_ex_mem_read <= mem_read_id;
-            id_ex_mem_to_reg <= mem_to_reg_id;
-            id_ex_alu_op <= alu_op_id;
-            id_ex_mem_write <= mem_write_id;
-            id_ex_alu_src <= alu_src_id;
-            id_ex_reg_write <= reg_write_id;
-            id_ex_alu_src_a <= csr_we_id;
             id_ex_csr_we <= 0;
             id_ex_is_mret <= 0;
             id_ex_is_ecall <= 0;
@@ -349,7 +326,6 @@ module core (
             id_ex_is_jalr <= is_jalr_id;
             id_ex_csr_rdata <= csr_rdata_id;
         end
-    end
     end
 
     // =========================================================================
@@ -437,31 +413,9 @@ module core (
     assign pc_next = interrupt_en ? mtvec :
                      is_ecall_id  ? mtvec : // Exception (ECALL)
                      is_mret_id   ? mepc :
-                     (id_ex_jump && (id_ex_funct3 == 0)) ? jalr_target_ex : // JALR (funct3=0 for JALR? No, opcode distinguishes. But here we use jump signal)
-                     // Wait, JALR is I-type, JAL is J-type. 
-                     // We need to distinguish JAL vs JALR.
-                     // Let's assume control unit sets 'jump' for both.
-                     // We can check opcode or funct3 if passed.
-                     // JALR has funct3=000. JAL doesn't have funct3.
-                     // Let's use a dedicated signal or check instruction bit if available?
-                     // We don't have opcode in EX.
-                     // Let's assume we passed enough info.
-                     // Actually, JALR target is calculated using ALU usually?
-                     // For now, let's assume JALR target is handled.
-                     // To be safe: JALR is opcode 1100111.
-                     // Let's add is_jalr to ID/EX?
-                     // For simplicity:
                      branch_taken_ex ? branch_target_ex :
-                     id_ex_jump ? ((id_ex_alu_src_a) ? jalr_target_ex : branch_target_ex) : // Hack: JALR uses alu_src_a=1 (rs1), JAL uses alu_src_a=0 (PC)? No.
-                     // Let's fix JALR logic properly.
-                     // JAL: PC+imm. JALR: rs1+imm.
-                     // In ID, we set alu_src_a=1 for JAL (PC), alu_src_a=0 for JALR (rs1)?
-                     // Control Unit:
-                     // JAL: alu_src_a=1 (PC), alu_src=1 (imm). Result = PC+imm.
-                     // JALR: alu_src_a=0 (rs1), alu_src=1 (imm). Result = rs1+imm.
-                     // So alu_result_ex IS the target for both!
-                     // EXCEPT JALR needs LSB masked.
-                     id_ex_jump ? (alu_result_ex & ~1) : // Works for JAL too since imm is even? Yes.
+                     (id_ex_jump && id_ex_is_jalr) ? jalr_target_ex :
+                     id_ex_jump ? branch_target_ex :
                      (pc_curr + 4);
 
     // EX/MEM Pipeline Register
@@ -508,7 +462,7 @@ module core (
     
     always @(*) begin
         dmem_wdata = ex_mem_rs2_data;
-        dmem_byte_enable = 4'b1111;
+        dmem_byte_enable = 4'b0000;
         
         if (ex_mem_mem_write) begin
             case (ex_mem_funct3)
@@ -629,10 +583,10 @@ module core (
                       mem_wb_alu_result;
 
     // Debug
-    always @(posedge clk) begin
-        if (id_ex_jump || flush_trap) begin
-            $display("Time: %0t | Jump/Trap | PC: %h | Target: %h | FlushJump: %b | FlushTrap: %b | Mtvec: %h", 
-                     $time, id_ex_pc, branch_target_ex, flush_jump, flush_trap, mtvec);
-        end
-    end
+    // always @(posedge clk) begin
+    //     if (id_ex_jump || flush_trap) begin
+    //         $display("Time: %0t | Jump/Trap | PC: %h | Target: %h | FlushJump: %b | FlushTrap: %b | Mtvec: %h", 
+    //                  $time, id_ex_pc, branch_target_ex, flush_jump, flush_trap, mtvec);
+    //     end
+    // end
 endmodule

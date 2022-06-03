@@ -41,17 +41,33 @@ module core_tb;
         rst_n = 1;
 
         // Run simulation for a few cycles
-        #1000000;
+        #5000000;
         $finish;
     end
 
-    // Simple Trace
+    // Monitor for X in PC
     always @(posedge clk) begin
-        if (rst_n) begin
-            $display("Time: %0t | PC_IF: %h | Instr: %h | Stall: %b | Flush: %b", 
-                     $time, u_core.pc_curr, instr, u_core.stall, u_core.flush_branch);
+        if ((^u_core.pc_curr === 1'bx) && rst_n) begin
+            $display("Time: %0t | ERROR: PC became X!", $time);
+            // $finish; // Don't finish yet, let's see the trace
         end
     end
+
+    // Trace
+    always @(posedge clk) begin
+        if ($time > 1440000) begin
+             $display("Time: %0t | PC: %h | Instr: %h | Stall: %b | Flush: %b | Jump: %b | JALR: %b", 
+                      $time, u_core.pc_curr, instr, u_core.stall, u_core.flush_branch, u_core.id_ex_jump, u_core.id_ex_is_jalr);
+        end
+    end
+
+    // Simple Trace
+    // always @(posedge clk) begin
+    //     if (rst_n) begin
+    //         $display("Time: %0t | PC_IF: %h | Instr: %h | Stall: %b | Flush: %b", 
+    //                  $time, u_core.pc_curr, instr, u_core.stall, u_core.flush_branch);
+    //     end
+    // end
 
 
     // Debug Monitor
