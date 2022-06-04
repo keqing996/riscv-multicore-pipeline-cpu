@@ -411,6 +411,7 @@ module core (
     // Priority: Reset > Interrupt > Exception > MRET > JALR > JAL/Branch > Next
     // Note: Interrupts/Exceptions are detected in ID stage in this design
     assign pc_next = interrupt_en ? mtvec :
+                     stall ? pc_curr : // Stall: Hold PC
                      is_ecall_id  ? mtvec : // Exception (ECALL)
                      is_mret_id   ? mepc :
                      branch_taken_ex ? branch_target_ex :

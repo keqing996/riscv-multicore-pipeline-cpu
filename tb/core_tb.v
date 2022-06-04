@@ -40,6 +40,18 @@ module core_tb;
         #20;
         rst_n = 1;
 
+        // Debug: Print instructions around failure
+        $display("Instr at 770: %h", u_imem.memory[32'h770 >> 2]);
+        $display("Instr at 774: %h", u_imem.memory[32'h774 >> 2]);
+        $display("Instr at 778: %h", u_imem.memory[32'h778 >> 2]);
+        $display("Instr at 77C: %h", u_imem.memory[32'h77C >> 2]);
+        $display("Instr at 780: %h", u_imem.memory[32'h780 >> 2]);
+        $display("Instr at 784: %h", u_imem.memory[32'h784 >> 2]);
+        $display("Instr at 788: %h", u_imem.memory[32'h788 >> 2]);
+        $display("Instr at 78C: %h", u_imem.memory[32'h78C >> 2]);
+        $display("Instr at 790: %h", u_imem.memory[32'h790 >> 2]);
+        $display("Instr at 794: %h", u_imem.memory[32'h794 >> 2]);
+
         // Run simulation for a few cycles
         #5000000;
         $finish;
@@ -55,14 +67,10 @@ module core_tb;
 
     // Trace
     always @(posedge clk) begin
-        // Trace logical operations or suspicious results
-        if (u_core.alu_ctrl_ex == 4'b0111 || // AND
-            u_core.alu_ctrl_ex == 4'b0110 || // OR
-            u_core.alu_ctrl_ex == 4'b0100 || // XOR
-            u_core.alu_result_ex == 32'h77000000) begin
-             $display("Time: %0t | PC_EX: %h | ALU_Ctrl: %b | A_in: %h | B_in: %h | Res: %h | RS1_D: %h | RS2_D: %h | Imm: %h | FwdA: %h | FwdB: %h", 
-                      $time, u_core.id_ex_pc, u_core.alu_ctrl_ex, u_core.alu_in_a_ex, u_core.alu_in_b_ex, u_core.alu_result_ex,
-                      u_core.id_ex_rs1_data, u_core.id_ex_rs2_data, u_core.id_ex_imm, u_core.forward_a_val, u_core.forward_b_val);
+        // Trace around the area of interest (PC 0x770)
+        if (u_core.id_ex_pc >= 32'h760 && u_core.id_ex_pc <= 32'h7A0) begin
+             $display("Time: %0t | PC_EX: %h | Op: %b | Stall: %b | MemRead_EX: %b | RD_EX: %d | RS1_ID: %d | RS2_ID: %d | FwdA: %b | FwdB: %b | Res: %h", 
+                      $time, u_core.id_ex_pc, u_core.opcode, u_core.stall, u_core.id_ex_mem_read, u_core.id_ex_rd, u_core.rs1_id, u_core.rs2_id, u_core.forward_a, u_core.forward_b, u_core.alu_result_ex);
         end
     end
 
