@@ -30,9 +30,13 @@ module regfile (
         end
     end
 
-    // Read operation (Asynchronous)
-    // If reading x0, always return 0.
-    assign rs1_data = (rs1_addr == 5'b0) ? 32'b0 : regs[rs1_addr];
-    assign rs2_data = (rs2_addr == 5'b0) ? 32'b0 : regs[rs2_addr];
+    // Read operation (Asynchronous) with Write-Through Forwarding
+    assign rs1_data = (rs1_addr == 5'b0) ? 32'b0 :
+                      (we && (rs1_addr == rd_addr)) ? wdata : // Forwarding from WB
+                      regs[rs1_addr];
+
+    assign rs2_data = (rs2_addr == 5'b0) ? 32'b0 :
+                      (we && (rs2_addr == rd_addr)) ? wdata : // Forwarding from WB
+                      regs[rs2_addr];
 
 endmodule

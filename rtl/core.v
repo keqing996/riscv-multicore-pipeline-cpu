@@ -476,16 +476,7 @@ module core (
         .clk(clk),
         .we(uart_we),
         .addr(ex_mem_alu_result),
-        .wdata(ex_mem_rs2_data) // Note: UART usually takes raw data, but LSU aligns it. 
-                                // However, UART sim might expect byte 0. 
-                                // Let's check LSU implementation. LSU replicates bytes for SB.
-                                // So ex_mem_rs2_data (raw) or dmem_wdata (aligned)?
-                                // UART sim usually looks at wdata[7:0].
-                                // If we use dmem_wdata, it has the byte in the correct lane.
-                                // But UART is usually memory mapped to a specific address.
-                                // Let's stick to ex_mem_rs2_data for now as it was before, 
-                                // or use dmem_wdata[7:0] if aligned.
-                                // The previous code used ex_mem_rs2_data.
+        .wdata(ex_mem_rs2_data) 
     );
 
     // Timer Instance
@@ -494,8 +485,7 @@ module core (
         .rst_n(rst_n),
         .we(timer_we),
         .addr(ex_mem_alu_result),
-        .wdata(ex_mem_rs2_data), // Timer also likely expects raw data or aligned?
-                                 // Previous code used ex_mem_rs2_data.
+        .wdata(ex_mem_rs2_data), 
         .rdata(timer_rdata),
         .irq(timer_irq)
     );
@@ -529,12 +519,4 @@ module core (
     assign wdata_wb = mem_wb_csr_to_reg ? mem_wb_csr_rdata :
                       mem_wb_mem_to_reg ? mem_wb_rdata : 
                       mem_wb_alu_result;
-
-    // Debug
-    // always @(posedge clk) begin
-    //     if (id_ex_jump || flush_trap) begin
-    //         $display("Time: %0t | Jump/Trap | PC: %h | Target: %h | FlushJump: %b | FlushTrap: %b | Mtvec: %h", 
-    //                  $time, id_ex_pc, branch_target_ex, flush_jump, flush_trap, mtvec);
-    //     end
-    // end
 endmodule
