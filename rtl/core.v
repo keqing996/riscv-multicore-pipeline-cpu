@@ -112,8 +112,8 @@ module core (
     wire [31:0] dmem_rdata_aligned;
     wire [31:0] timer_rdata;
     wire [31:0] mem_rdata_final;
-    reg [31:0] dmem_wdata;
-    reg [3:0] dmem_byte_enable;
+    wire [31:0] dmem_wdata;
+    wire [3:0] dmem_byte_enable;
     wire is_timer_addr;
     wire is_uart_addr;
     wire timer_irq;
@@ -382,18 +382,13 @@ module core (
     assign branch_target_ex = id_ex_pc + id_ex_imm;
 
     // Branch Condition Check
-    reg branch_cond;
-    always @(*) begin
-        case (id_ex_funct3)
-            3'b000: branch_cond = (forward_a_val == forward_b_val); // BEQ
-            3'b001: branch_cond = (forward_a_val != forward_b_val); // BNE
-            3'b100: branch_cond = ($signed(forward_a_val) < $signed(forward_b_val)); // BLT
-            3'b101: branch_cond = ($signed(forward_a_val) >= $signed(forward_b_val)); // BGE
-            3'b110: branch_cond = (forward_a_val < forward_b_val); // BLTU
-            3'b111: branch_cond = (forward_a_val >= forward_b_val); // BGEU
-            default: branch_cond = 0;
-        endcase
-    end
+    wire branch_cond;
+    branch_unit u_branch_unit (
+        .funct3(id_ex_funct3),
+        .a(forward_a_val),
+        .b(forward_b_val),
+        .branch_taken(branch_cond)
+    );
 
     assign branch_taken_ex = (id_ex_branch && branch_cond);
     
@@ -450,38 +445,22 @@ module core (
     // MEM Stage
     // =========================================================================
 
-    // Address Decoding
-    assign is_uart_addr = (ex_mem_alu_result == 32'h40000000);
-    assign is_timer_addr = (ex_mem_alu_result >= 32'h40004000 && ex_mem_alu_result <= 32'h4000400C);
-    
-    wire dmem_we = ex_mem_mem_write && !is_uart_addr && !is_timer_addr;
-    wire uart_we = ex_mem_mem_write && is_uart_addr;
-    wire timer_we = ex_mem_mem_write && is_timer_addr;
-
-    // Store Data Alignment (Logic from previous core.v)
-    wire [1:0] addr_offset = ex_mem_alu_result[1:0];
-    
-    always @(*) begin
-        dmem_wdata = ex_mem_rs2_data;
-        dmem_byte_enable = 4'b0000;
-        
-        if (ex_mem_mem_write) begin
-            case (ex_mem_funct3)
-                3'b000: begin // SB
-                    dmem_wdata = {4{ex_mem_rs2_data[7:0]}};
-                    dmem_byte_enable = 4'b0001 << addr_offset;
-                end
-                3'b001: begin // SH
-                    dmem_wdata = {2{ex_mem_rs2_data[15:0]}};
-                    dmem_byte_enable = 4'b0011 << addr_offset;
-                end
-                default: begin // SW
-                    dmem_wdata = ex_mem_rs2_data;
-                    dmem_byte_enable = 4'b1111;
-                end
-            endcase
-        end
-    end
+    // Load Store Unit
+    load_store_unit u_lsu (
+        .addr(ex_mem_alu_result),
+        .wdata_in(ex_mem_rs2_data),
+        .mem_read(ex_mem_mem_read),
+        .mem_write(ex_mem_mem_write),
+        .funct3(ex_mem_funct3),
+        .dmem_rdata(dmem_rdata_raw),
+        .timer_rdata(timer_rdata),
+        .dmem_wdata(dmem_wdata),
+        .dmem_byte_enable(dmem_byte_enable),
+        .dmem_we(dmem_we),
+        .uart_we(uart_we),
+        .timer_we(timer_we),
+        .mem_rdata_final(mem_rdata_final)
+    );
 
     // DMEM Instance
     dmem u_dmem (
@@ -497,7 +476,16 @@ module core (
         .clk(clk),
         .we(uart_we),
         .addr(ex_mem_alu_result),
-        .wdata(ex_mem_rs2_data)
+        .wdata(ex_mem_rs2_data) // Note: UART usually takes raw data, but LSU aligns it. 
+                                // However, UART sim might expect byte 0. 
+                                // Let's check LSU implementation. LSU replicates bytes for SB.
+                                // So ex_mem_rs2_data (raw) or dmem_wdata (aligned)?
+                                // UART sim usually looks at wdata[7:0].
+                                // If we use dmem_wdata, it has the byte in the correct lane.
+                                // But UART is usually memory mapped to a specific address.
+                                // Let's stick to ex_mem_rs2_data for now as it was before, 
+                                // or use dmem_wdata[7:0] if aligned.
+                                // The previous code used ex_mem_rs2_data.
     );
 
     // Timer Instance
@@ -506,53 +494,12 @@ module core (
         .rst_n(rst_n),
         .we(timer_we),
         .addr(ex_mem_alu_result),
-        .wdata(ex_mem_rs2_data),
+        .wdata(ex_mem_rs2_data), // Timer also likely expects raw data or aligned?
+                                 // Previous code used ex_mem_rs2_data.
         .rdata(timer_rdata),
         .irq(timer_irq)
     );
 
-    // Load Data Alignment
-    reg [31:0] dmem_rdata_aligned_reg;
-    always @(*) begin
-        case (ex_mem_funct3)
-            3'b000: begin // LB
-                case (addr_offset)
-                    2'b00: dmem_rdata_aligned_reg = {{24{dmem_rdata_raw[7]}}, dmem_rdata_raw[7:0]};
-                    2'b01: dmem_rdata_aligned_reg = {{24{dmem_rdata_raw[15]}}, dmem_rdata_raw[15:8]};
-                    2'b10: dmem_rdata_aligned_reg = {{24{dmem_rdata_raw[23]}}, dmem_rdata_raw[23:16]};
-                    2'b11: dmem_rdata_aligned_reg = {{24{dmem_rdata_raw[31]}}, dmem_rdata_raw[31:24]};
-                endcase
-            end
-            3'b001: begin // LH
-                case (addr_offset[1])
-                    1'b0: dmem_rdata_aligned_reg = {{16{dmem_rdata_raw[15]}}, dmem_rdata_raw[15:0]};
-                    1'b1: dmem_rdata_aligned_reg = {{16{dmem_rdata_raw[31]}}, dmem_rdata_raw[31:16]};
-                endcase
-            end
-            3'b010: begin // LW
-                dmem_rdata_aligned_reg = dmem_rdata_raw;
-            end
-            3'b100: begin // LBU
-                case (addr_offset)
-                    2'b00: dmem_rdata_aligned_reg = {24'b0, dmem_rdata_raw[7:0]};
-                    2'b01: dmem_rdata_aligned_reg = {24'b0, dmem_rdata_raw[15:8]};
-                    2'b10: dmem_rdata_aligned_reg = {24'b0, dmem_rdata_raw[23:16]};
-                    2'b11: dmem_rdata_aligned_reg = {24'b0, dmem_rdata_raw[31:24]};
-                endcase
-            end
-            3'b101: begin // LHU
-                case (addr_offset[1])
-                    1'b0: dmem_rdata_aligned_reg = {16'b0, dmem_rdata_raw[15:0]};
-                    1'b1: dmem_rdata_aligned_reg = {16'b0, dmem_rdata_raw[31:16]};
-                endcase
-            end
-            default: dmem_rdata_aligned_reg = dmem_rdata_raw;
-        endcase
-    end
-    assign dmem_rdata_aligned = dmem_rdata_aligned_reg;
-
-    // Mux for Read Data (Timer vs DMEM)
-    assign mem_rdata_final = is_timer_addr ? timer_rdata : dmem_rdata_aligned;
 
     // MEM/WB Pipeline Register
     always @(posedge clk or negedge rst_n) begin
