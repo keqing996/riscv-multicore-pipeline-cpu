@@ -2,8 +2,7 @@ module alu (
     input wire [31:0] a,
     input wire [31:0] b,
     input wire [3:0] alu_ctrl, // ALU Control Signal
-    output reg [31:0] result,
-    output wire zero           // Zero flag (for branches)
+    output reg [31:0] result
 );
 
     // ALU Control Codes (defined arbitrarily for now)
@@ -35,7 +34,5 @@ module alu (
             default:  result = 32'b0;
         endcase
     end
-
-    assign zero = (result == 32'b0);
 
 endmodule

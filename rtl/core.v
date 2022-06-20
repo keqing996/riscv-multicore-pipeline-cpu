@@ -82,7 +82,6 @@ module core (
 
     // --- EX Stage Signals ---
     wire [31:0] alu_result_ex;
-    wire zero_flag_ex;
     wire [3:0] alu_ctrl_ex;
     wire [31:0] alu_in_a_ex;
     wire [31:0] alu_in_b_ex;
@@ -167,9 +166,6 @@ module core (
     // =========================================================================
 
     // Decoder
-    wire is_r_type, is_i_type, is_s_type, is_b_type, is_u_type, is_j_type;
-    wire is_load, is_store;
-
     decoder u_decoder (
         .instr(if_id_instr),
         .opcode(opcode),
@@ -177,15 +173,7 @@ module core (
         .funct7(funct7),
         .rd(rd_id),
         .rs1(rs1_id),
-        .rs2(rs2_id),
-        .is_r_type(is_r_type),
-        .is_i_type(is_i_type),
-        .is_s_type(is_s_type),
-        .is_b_type(is_b_type),
-        .is_u_type(is_u_type),
-        .is_j_type(is_j_type),
-        .is_load(is_load),
-        .is_store(is_store)
+        .rs2(rs2_id)
     );
 
     // Control Unit
@@ -371,8 +359,7 @@ module core (
         .a(alu_in_a_ex),
         .b(alu_in_b_ex),
         .alu_ctrl(alu_ctrl_ex),
-        .result(alu_out_ex),
-        .zero(zero_flag_ex)
+        .result(alu_out_ex)
     );
 
     assign alu_result_ex = id_ex_jump ? (id_ex_pc + 32'd4) : alu_out_ex;
