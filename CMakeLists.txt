@@ -3,6 +3,7 @@ project(riscv-cpu NONE)
 
 # --- Configuration ---
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+enable_testing() # Enable CTest
 
 # Tools
 find_program(IVERILOG_EXE iverilog REQUIRED)
@@ -66,10 +67,27 @@ macro(add_riscv_test TEST_NAME)
     # Target for this test software
     add_custom_target(sw_${TEST_NAME} ALL DEPENDS ${TEST_HEX})
 
-    # Simulation Target
+    # CTest Integration
+    add_test(
+        NAME ${TEST_NAME}
+        COMMAND ${PYTHON_EXE} ${CMAKE_SOURCE_DIR}/tools/run_test.py
+                --vvp ${VVP_EXE}
+                --sim-dir ${CMAKE_BINARY_DIR}/sim
+                --sim-file core_tb.vvp
+                --hex ${TEST_HEX}
+                --name ${TEST_NAME}
+    )
+    # Ensure simulation is built before running tests
+    set_tests_properties(${TEST_NAME} PROPERTIES DEPENDS core_compile_vvp)
+
+    # Legacy Simulation Target (Optional, for manual 'make sim_xxx')
     add_custom_target(sim_${TEST_NAME}
-        COMMAND ${CMAKE_COMMAND} -E copy ${TEST_HEX} ${CMAKE_BINARY_DIR}/sim/program.hex
-        COMMAND cd ${CMAKE_BINARY_DIR}/sim && ${VVP_EXE} core_tb.vvp
+        COMMAND ${PYTHON_EXE} ${CMAKE_SOURCE_DIR}/tools/run_test.py
+                --vvp ${VVP_EXE}
+                --sim-dir ${CMAKE_BINARY_DIR}/sim
+                --sim-file core_tb.vvp
+                --hex ${TEST_HEX}
+                --name ${TEST_NAME}
         DEPENDS sw_${TEST_NAME} core_compile_vvp
         COMMENT "Running Simulation for ${TEST_NAME}..."
         USES_TERMINAL
