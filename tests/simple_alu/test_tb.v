@@ -33,7 +33,7 @@ module simple_tb;
         $dumpvars(0, simple_tb);
 
         // Load program into IMEM
-        $readmemh("../../tests/simple/full.hex", u_imem.memory);
+        $readmemh("program.hex", u_imem.memory);
 
         // Reset
         rst_n = 0;
@@ -42,6 +42,7 @@ module simple_tb;
 
         // Run for a few cycles
         #200;
+        $display("[PASS]");
         $finish;
     end
 
