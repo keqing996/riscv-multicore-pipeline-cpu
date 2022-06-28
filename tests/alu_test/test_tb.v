@@ -35,6 +35,9 @@ module core_tb;
         // Load program into IMEM
         $readmemh("program.hex", u_imem.memory);
 
+        // Load program into DMEM (for .rodata and .data)
+        $readmemh("program.hex", u_core.u_dmem.memory);
+
         // Reset
         rst_n = 0;
         #20;

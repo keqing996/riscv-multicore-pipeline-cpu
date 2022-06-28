@@ -23,8 +23,9 @@ set(RISCV_CFLAGS
     -ffreestanding 
     -nostdlib 
     -O2 -g -Wall
+    -I${CMAKE_SOURCE_DIR}/tests/common
 )
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/tests/link.ld)
+set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/tests/common/link.ld)
 set(RISCV_LDFLAGS -T ${LINKER_SCRIPT})
 set(HEX_GEN_SCRIPT ${CMAKE_SOURCE_DIR}/tools/make_hex.py)
 
@@ -48,7 +49,7 @@ foreach(TEST_NAME ${CHILDREN})
         # 1. Determine Test Type (Software vs Pure Hex)
         if(EXISTS ${TEST_DIR}/main.c)
             # --- Software Test (Compile C -> Hex) ---
-            set(TEST_SRC ${TEST_DIR}/start.S ${TEST_DIR}/main.c)
+            set(TEST_SRC ${TEST_DIR}/start.S ${TEST_DIR}/main.c ${CMAKE_SOURCE_DIR}/tests/common/common.c)
             set(TEST_ELF ${CMAKE_BINARY_DIR}/tests/${TEST_NAME}.elf)
             set(TEST_BIN ${CMAKE_BINARY_DIR}/tests/${TEST_NAME}.bin)
             set(TEST_HEX ${CMAKE_BINARY_DIR}/tests/${TEST_NAME}.hex)
@@ -59,7 +60,7 @@ foreach(TEST_NAME ${CHILDREN})
             add_custom_command(
                 OUTPUT ${TEST_ELF}
                 COMMAND ${RISCV_CC} ${RISCV_CFLAGS} ${RISCV_LDFLAGS} ${TEST_SRC} -o ${TEST_ELF}
-                DEPENDS ${TEST_SRC} ${LINKER_SCRIPT}
+                DEPENDS ${TEST_SRC} ${LINKER_SCRIPT} ${CMAKE_SOURCE_DIR}/tests/common/common.h
                 COMMENT "Compiling ${TEST_NAME}: ${TEST_NAME}.elf"
             )
 

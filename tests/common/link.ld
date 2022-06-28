@@ -15,6 +15,11 @@ SECTIONS
     *(.text.*)
   } > RAM
   
+  .rodata : {
+    *(.rodata)
+    *(.rodata.*)
+  } > RAM
+  
   .data : {
     *(.data)
     *(.data.*)
