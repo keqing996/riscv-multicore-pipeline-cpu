@@ -97,7 +97,7 @@ foreach(TEST_NAME ${CHILDREN})
         if(EXISTS ${TEST_TB})
             add_custom_command(
                 OUTPUT ${SIM_VVP}
-                COMMAND ${IVERILOG_EXE} -o ${SIM_VVP} -I ${CMAKE_SOURCE_DIR}/rtl ${TEST_TB} ${RTL_SRCS}
+                COMMAND ${IVERILOG_EXE} -g2012 -o ${SIM_VVP} -I ${CMAKE_SOURCE_DIR}/rtl ${TEST_TB} ${RTL_SRCS}
                 DEPENDS ${RTL_SRCS} ${TEST_TB}
                 COMMENT "Compiling Verilog for ${TEST_NAME}"
             )

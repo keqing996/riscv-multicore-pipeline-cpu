@@ -43,13 +43,10 @@ module simple_tb;
         // Run for a few cycles
         #200;
         
-        // Verification
-        if (u_core.u_regfile.regs[3] === 32'd30) begin
-            $display("[PASS]");
-        end else begin
-            $display("[FAIL] x3 = %d (Expected 30)", u_core.u_regfile.regs[3]);
-        end
+        // Verification using SystemVerilog Assertions
+        assert(u_core.u_regfile.regs[3] === 32'd30) else $fatal(1, "Assertion Failed: x3 = %d (Expected 30)", u_core.u_regfile.regs[3]);
         
+        $display("Test Passed");
         $finish;
     end
 
