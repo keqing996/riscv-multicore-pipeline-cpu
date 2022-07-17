@@ -42,7 +42,14 @@ module simple_tb;
 
         // Run for a few cycles
         #200;
-        $display("[PASS]");
+        
+        // Verification
+        if (u_core.u_regfile.regs[3] === 32'h55) begin
+            $display("[PASS]");
+        end else begin
+            $display("[FAIL] x3 = %h (Expected 0x55)", u_core.u_regfile.regs[3]);
+        end
+
         $finish;
     end
 
