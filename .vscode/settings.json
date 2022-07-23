@@ -1,5 +1,11 @@
 {
+    "python.testing.pytestArgs": [
+        "test_runner.py"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
     "cSpell.words": [
+        "cocotb",
         "dout",
         "dumpfile",
         "dumpvars",
