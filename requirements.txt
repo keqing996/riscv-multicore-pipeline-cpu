@@ -1,0 +1,3 @@
+cocotb
+cocotb-test
+pytest
