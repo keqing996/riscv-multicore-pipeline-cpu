@@ -19,7 +19,7 @@ TOOLS_DIR = os.path.join(ROOT_DIR, "tools")
 BUILD_DIR = os.path.join(ROOT_DIR, "build")
 
 # Common Verilog sources
-VERILOG_SOURCES = glob.glob(os.path.join(RTL_DIR, "*.v"))
+VERILOG_SOURCES = glob.glob(os.path.join(RTL_DIR, "**", "*.v"), recursive=True)
 # Add system_top.v
 VERILOG_SOURCES.append(os.path.join(TESTS_DIR, "common", "system_top.v"))
 
