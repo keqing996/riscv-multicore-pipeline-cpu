@@ -1,6 +1,6 @@
 # RISC-V CPU Implementation
 
-A simple single-cycle RISC-V CPU implementation in Verilog.
+A simple 5-stage pipelined RISC-V CPU implementation in Verilog.
 
 ## Project Structure
 
