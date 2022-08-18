@@ -14,9 +14,15 @@ module core (
     wire [31:0] pc_curr;
     wire [31:0] if_instr; // Instruction in IF stage
 
+    // Branch Prediction Signals
+    wire predict_taken;
+    wire [31:0] predict_target;
+
     // --- IF/ID Pipeline Registers ---
     reg [31:0] if_id_pc;
     reg [31:0] if_id_instr;
+    reg if_id_predict_taken;
+    reg [31:0] if_id_predict_target;
 
     // --- ID Stage Signals ---
     wire [6:0] opcode;
@@ -53,6 +59,8 @@ module core (
 
     // --- ID/EX Pipeline Registers ---
     reg [31:0] id_ex_pc;
+    reg id_ex_predict_taken;
+    reg [31:0] id_ex_predict_target;
     reg [31:0] id_ex_rs1_data;
     reg [31:0] id_ex_rs2_data;
     reg [31:0] id_ex_imm;
@@ -146,17 +154,39 @@ module core (
     assign pc_addr = pc_curr;
     assign if_instr = instr;
 
+    // Branch Predictor
+    // Note: Inputs from EX stage are feedback
+    wire [31:0] jalr_target_ex; // Forward declaration
+    branch_predictor u_branch_predictor (
+        .clk(clk),
+        .rst_n(rst_n),
+        .pc_if(pc_curr),
+        .predict_taken(predict_taken),
+        .predict_target(predict_target),
+        .pc_ex(id_ex_pc),
+        .branch_taken_ex(branch_taken_ex || id_ex_jump), 
+        .branch_target_ex((id_ex_jump && id_ex_is_jalr) ? jalr_target_ex : branch_target_ex),
+        .is_branch_ex(id_ex_branch),
+        .is_jump_ex(id_ex_jump)
+    );
+
     // IF/ID Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             if_id_pc <= 0;
             if_id_instr <= 0; // NOP
+            if_id_predict_taken <= 0;
+            if_id_predict_target <= 0;
         end else if (flush_branch || flush_jump || flush_trap) begin
             if_id_pc <= 0;
             if_id_instr <= 0; // Flush -> NOP
+            if_id_predict_taken <= 0;
+            if_id_predict_target <= 0;
         end else if (!stall) begin
             if_id_pc <= pc_curr;
             if_id_instr <= if_instr;
+            if_id_predict_taken <= predict_taken;
+            if_id_predict_target <= predict_target;
         end
         // If stall, hold value
     end
@@ -251,6 +281,8 @@ module core (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             id_ex_pc <= 0;
+            id_ex_predict_taken <= 0;
+            id_ex_predict_target <= 0;
             id_ex_rs1_data <= 0;
             id_ex_rs2_data <= 0;
             id_ex_imm <= 0;
@@ -286,9 +318,17 @@ module core (
             id_ex_is_mret <= 0;
             id_ex_is_ecall <= 0;
             id_ex_is_jalr <= 0;
+            
+            // Clear prediction info to avoid false mispredicts on bubbles
+            id_ex_predict_taken <= 0;
+            id_ex_predict_target <= 0;
+            id_ex_pc <= 0; 
+            
             // Others don't matter if reg_write/mem_write are 0
         end else begin
             id_ex_pc <= if_id_pc;
+            id_ex_predict_taken <= if_id_predict_taken;
+            id_ex_predict_target <= if_id_predict_target;
             id_ex_rs1_data <= rs1_data_id;
             id_ex_rs2_data <= rs2_data_id;
             id_ex_imm <= imm_id;
@@ -382,23 +422,33 @@ module core (
     // Jump Logic (JAL/JALR)
     // JAL target = PC + imm (calculated in branch_target_ex)
     // JALR target = (rs1 + imm) & ~1
-    wire [31:0] jalr_target_ex = (forward_a_val + id_ex_imm) & 32'hFFFFFFFE;
+    assign jalr_target_ex = (forward_a_val + id_ex_imm) & 32'hFFFFFFFE;
     
     // Flush signals
-    assign flush_branch = branch_taken_ex;
-    assign flush_jump   = id_ex_jump; // Always flush on jump in EX stage (simple)
+    // Misprediction Logic
+    wire actual_taken = branch_taken_ex || id_ex_jump;
+    wire [31:0] actual_target = (id_ex_jump && id_ex_is_jalr) ? jalr_target_ex : branch_target_ex;
+    wire is_control_ex = id_ex_branch || id_ex_jump;
+
+    wire mispredict = 
+        (is_control_ex && (id_ex_predict_taken != actual_taken)) || 
+        (is_control_ex && id_ex_predict_taken && (id_ex_predict_target != actual_target)) ||
+        (!is_control_ex && id_ex_predict_taken);
+
+    wire [31:0] correct_pc = actual_taken ? actual_target : (id_ex_pc + 4);
+
+    assign flush_branch = mispredict;
+    assign flush_jump   = 0; // Handled by mispredict
     assign flush_trap   = interrupt_en || is_ecall_id || is_mret_id; // Flush on trap (from ID)
 
     // PC Next Logic
-    // Priority: Reset > Interrupt > Exception > MRET > JALR > JAL/Branch > Next
-    // Note: Interrupts/Exceptions are detected in ID stage in this design
+    // Priority: Reset > Interrupt > Exception > MRET > Mispredict > Prediction > Next
     assign pc_next = interrupt_en ? mtvec :
                      stall ? pc_curr : // Stall: Hold PC
                      is_ecall_id  ? mtvec : // Exception (ECALL)
                      is_mret_id   ? mepc :
-                     branch_taken_ex ? branch_target_ex :
-                     (id_ex_jump && id_ex_is_jalr) ? jalr_target_ex :
-                     id_ex_jump ? branch_target_ex :
+                     mispredict ? correct_pc :
+                     predict_taken ? predict_target :
                      (pc_curr + 4);
 
     // EX/MEM Pipeline Register
