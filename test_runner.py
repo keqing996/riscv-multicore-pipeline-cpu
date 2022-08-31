@@ -113,6 +113,9 @@ def test_alu():
 def test_csr_exception():
     run_cocotb_test("test_csr_exception", is_software=True)
 
+def test_branch_prediction():
+    run_cocotb_test("test_branch_prediction", is_software=True)
+
 if __name__ == "__main__":
     # If run directly, run all tests using pytest
     pytest.main([__file__])
