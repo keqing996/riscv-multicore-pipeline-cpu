@@ -1,11 +1,11 @@
 module alu (
     input wire [31:0] a,
     input wire [31:0] b,
-    input wire [3:0] alu_ctrl, // ALU Control Signal
+    input wire [3:0] alu_control_code,
     output reg [31:0] result
 );
 
-    // ALU Control Codes (defined arbitrarily for now)
+    // ALU Control Codes
     localparam ALU_ADD  = 4'b0000;
     localparam ALU_SUB  = 4'b1000;
     localparam ALU_SLL  = 4'b0001; // Shift Left Logical
@@ -19,7 +19,7 @@ module alu (
     localparam ALU_LUI  = 4'b1001; // Load Upper Immediate (Pass B)
 
     always @(*) begin
-        case (alu_ctrl)
+        case (alu_control_code)
             ALU_ADD:  result = a + b;
             ALU_SUB:  result = a - b;
             ALU_SLL:  result = a << b[4:0];

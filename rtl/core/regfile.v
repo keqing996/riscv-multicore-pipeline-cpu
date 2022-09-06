@@ -1,12 +1,12 @@
 module regfile (
     input wire clk,
-    input wire we,            // Write Enable
-    input wire [4:0] rs1_addr, // Read Address 1
-    input wire [4:0] rs2_addr, // Read Address 2
-    input wire [4:0] rd_addr,  // Write Address
-    input wire [31:0] wdata,   // Write Data
-    output wire [31:0] rs1_data, // Read Data 1
-    output wire [31:0] rs2_data  // Read Data 2
+    input wire write_enable,
+    input wire [4:0] rs1_index,
+    input wire [4:0] rs2_index,
+    input wire [4:0] rd_index,
+    input wire [31:0] write_data,
+    output wire [31:0] rs1_read_data,
+    output wire [31:0] rs2_read_data
 );
 
     // 32 registers of 32-bit width
@@ -25,18 +25,18 @@ module regfile (
     // Write operation (Synchronous)
     // Note: x0 is hardwired to 0, so we never write to it.
     always @(posedge clk) begin
-        if (we && (rd_addr != 5'b00000)) begin
-            regs[rd_addr] <= wdata;
+        if (write_enable && (rd_index != 5'b00000)) begin
+            regs[rd_index] <= write_data;
         end
     end
 
     // Read operation (Asynchronous) with Write-Through Forwarding
-    assign rs1_data = (rs1_addr == 5'b0) ? 32'b0 :
-                      (we && (rs1_addr == rd_addr)) ? wdata : // Forwarding from WB
-                      regs[rs1_addr];
+    assign rs1_read_data = (rs1_index == 5'b0) ? 32'b0 :
+                           (write_enable && (rs1_index == rd_index)) ? write_data : // Forwarding from WB
+                           regs[rs1_index];
 
-    assign rs2_data = (rs2_addr == 5'b0) ? 32'b0 :
-                      (we && (rs2_addr == rd_addr)) ? wdata : // Forwarding from WB
-                      regs[rs2_addr];
+    assign rs2_read_data = (rs2_index == 5'b0) ? 32'b0 :
+                           (write_enable && (rs2_index == rd_index)) ? write_data : // Forwarding from WB
+                           regs[rs2_index];
 
 endmodule

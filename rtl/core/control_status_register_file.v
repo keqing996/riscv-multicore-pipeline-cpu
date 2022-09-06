@@ -1,23 +1,23 @@
-module csr_file (
+module control_status_register_file (
     input wire clk,
     input wire rst_n,
     
     // Read/Write ports
-    input wire [11:0] csr_addr,
-    input wire csr_we,
-    input wire [31:0] csr_wdata,
-    output reg [31:0] csr_rdata,
+    input wire [11:0] csr_address,
+    input wire csr_write_enable,
+    input wire [31:0] csr_write_data,
+    output reg [31:0] csr_read_data,
 
     // Exception/Interrupt signals
-    input wire exception_en,      // Trigger exception (e.g. ECALL)
-    input wire [31:0] exception_pc, // PC where exception happened
+    input wire exception_enable,      // Trigger exception (e.g. ECALL)
+    input wire [31:0] exception_program_counter, // PC where exception happened
     input wire [31:0] exception_cause, // Cause code
-    input wire mret_en,           // Return from exception (MRET instruction)
-    input wire timer_irq,         // Timer Interrupt Input
+    input wire machine_return_enable,           // Return from exception (MRET instruction)
+    input wire timer_interrupt_request,         // Timer Interrupt Input
     
     output wire [31:0] mtvec_out, // Trap Vector Base Address
     output wire [31:0] mepc_out,  // Exception PC (for MRET)
-    output reg interrupt_en       // Trigger interrupt trap
+    output reg interrupt_enable       // Trigger interrupt trap
 );
 
     // CSR Addresses (Machine Mode)
@@ -37,7 +37,7 @@ module csr_file (
     wire [31:0] mip;    // Bit 7 = MTIP (Timer Interrupt Pending)
 
     // MIP is read-only for software (mostly), reflects hardware signals
-    assign mip = {24'b0, timer_irq, 7'b0};
+    assign mip = {24'b0, timer_interrupt_request, 7'b0};
 
     // Interrupt Logic
     wire global_ie = mstatus[3];
@@ -50,19 +50,19 @@ module csr_file (
     wire timer_interrupt_fire = global_ie && timer_ie && timer_ip;
 
     always @(*) begin
-        interrupt_en = timer_interrupt_fire;
+        interrupt_enable = timer_interrupt_fire;
     end
 
     // Read Logic
     always @(*) begin
-        case (csr_addr)
-            CSR_MSTATUS: csr_rdata = mstatus;
-            CSR_MIE:     csr_rdata = mie;
-            CSR_MTVEC:   csr_rdata = mtvec;
-            CSR_MEPC:    csr_rdata = mepc;
-            CSR_MCAUSE:  csr_rdata = mcause;
-            CSR_MIP:     csr_rdata = mip;
-            default:     csr_rdata = 32'b0;
+        case (csr_address)
+            CSR_MSTATUS: csr_read_data = mstatus;
+            CSR_MIE:     csr_read_data = mie;
+            CSR_MTVEC:   csr_read_data = mtvec;
+            CSR_MEPC:    csr_read_data = mepc;
+            CSR_MCAUSE:  csr_read_data = mcause;
+            CSR_MIP:     csr_read_data = mip;
+            default:     csr_read_data = 32'b0;
         endcase
     end
 
@@ -78,7 +78,7 @@ module csr_file (
             // Priority: Reset > Exception/Interrupt > Software Write
             
             if (timer_interrupt_fire) begin
-                mepc   <= exception_pc; // Save current PC (or next PC depending on arch)
+                mepc   <= exception_program_counter; // Save current PC (or next PC depending on arch)
                 mcause <= 32'h80000007; // Interrupt bit (31) + Cause 7 (Timer)
                 
                 // Disable Global Interrupts
@@ -87,28 +87,28 @@ module csr_file (
                 // Clear MIE (Bit 3)
                 mstatus[3] <= 1'b0;
             end
-            else if (exception_en) begin
-                mepc   <= exception_pc;
+            else if (exception_enable) begin
+                mepc   <= exception_program_counter;
                 mcause <= exception_cause;
                 // Save MIE to MPIE
                 mstatus[7] <= mstatus[3];
                 // Clear MIE
                 mstatus[3] <= 1'b0;
             end 
-            else if (mret_en) begin
+            else if (machine_return_enable) begin
                 // Restore MIE from MPIE
                 mstatus[3] <= mstatus[7];
                 // Set MPIE to 1 (standard says 1)
                 mstatus[7] <= 1'b1;
             end
             // Software Write (CSR Instructions)
-            else if (csr_we) begin
-                case (csr_addr)
-                    CSR_MSTATUS: mstatus <= csr_wdata;
-                    CSR_MIE:     mie     <= csr_wdata;
-                    CSR_MTVEC:   mtvec   <= csr_wdata;
-                    CSR_MEPC:    mepc    <= csr_wdata;
-                    CSR_MCAUSE:  mcause  <= csr_wdata;
+            else if (csr_write_enable) begin
+                case (csr_address)
+                    CSR_MSTATUS: mstatus <= csr_write_data;
+                    CSR_MIE:     mie     <= csr_write_data;
+                    CSR_MTVEC:   mtvec   <= csr_write_data;
+                    CSR_MEPC:    mepc    <= csr_write_data;
+                    CSR_MCAUSE:  mcause  <= csr_write_data;
                 endcase
             end
         end
