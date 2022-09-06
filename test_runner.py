@@ -116,6 +116,9 @@ def test_csr_exception():
 def test_branch_prediction():
     run_cocotb_test("test_branch_prediction", is_software=True)
 
+def test_hazard():
+    run_cocotb_test("test_hazard", is_software=False)
+
 if __name__ == "__main__":
     # If run directly, run all tests using pytest
     pytest.main([__file__])

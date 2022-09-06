@@ -2,6 +2,7 @@ module core (
     input wire clk,
     input wire rst_n,
     input wire [31:0] instr,   // Instruction from IMEM (IF stage)
+    input wire instr_gnt,      // Instruction Grant (Cache Hit/Ready)
     output wire [31:0] pc_addr // PC output to IMEM
 );
 
@@ -53,9 +54,14 @@ module core (
 
     // Hazard / Stall Signals
     wire stall;
+    wire stall_if; // Stall due to I-Cache miss
     wire flush_branch; // Flush due to branch taken
     wire flush_jump;   // Flush due to jump (JAL/JALR)
     wire flush_trap;   // Flush due to trap/interrupt
+
+    assign stall_if = !instr_gnt;
+    wire stall_global = stall || stall_if; // Global stall condition (for PC and IF/ID)
+    wire stall_backend = stall_if;         // Backend stall (only for Cache Miss)
 
     // --- ID/EX Pipeline Registers ---
     reg [31:0] id_ex_pc;
@@ -182,7 +188,7 @@ module core (
             if_id_instr <= 0; // Flush -> NOP
             if_id_predict_taken <= 0;
             if_id_predict_target <= 0;
-        end else if (!stall) begin
+        end else if (!stall_global) begin
             if_id_pc <= pc_curr;
             if_id_instr <= if_instr;
             if_id_predict_taken <= predict_taken;
@@ -307,7 +313,7 @@ module core (
             id_ex_is_ecall <= 0;
             id_ex_is_jalr <= 0;
             id_ex_csr_rdata <= 0;
-        end else if (stall || flush_branch || flush_jump || flush_trap) begin
+        end else if (flush_branch || flush_jump || flush_trap || stall || stall_if) begin
             // Flush ID/EX (Insert Bubble)
             id_ex_branch <= 0;
             id_ex_jump <= 0;
@@ -444,7 +450,7 @@ module core (
     // PC Next Logic
     // Priority: Reset > Interrupt > Exception > MRET > Mispredict > Prediction > Next
     assign pc_next = interrupt_en ? mtvec :
-                     stall ? pc_curr : // Stall: Hold PC
+                     stall_global ? pc_curr : // Stall: Hold PC
                      is_ecall_id  ? mtvec : // Exception (ECALL)
                      is_mret_id   ? mepc :
                      mispredict ? correct_pc :
@@ -464,7 +470,7 @@ module core (
             ex_mem_reg_write <= 0;
             ex_mem_csr_to_reg <= 0;
             ex_mem_csr_rdata <= 0;
-        end else begin
+        end else if (!stall_global) begin
             ex_mem_alu_result <= alu_result_ex;
             ex_mem_rs2_data <= forward_b_val; // Store data (after forwarding)
             ex_mem_rd <= id_ex_rd;
@@ -538,7 +544,7 @@ module core (
             mem_wb_reg_write <= 0;
             mem_wb_csr_to_reg <= 0;
             mem_wb_csr_rdata <= 0;
-        end else begin
+        end else if (!stall_global) begin
             mem_wb_rdata <= mem_rdata_final;
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_rd <= ex_mem_rd;

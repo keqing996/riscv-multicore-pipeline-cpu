@@ -10,21 +10,95 @@ module system_top (
 
     wire [31:0] instr;
     wire [31:0] pc_addr;
+    wire instr_gnt;
 
-    // Instantiate Core
-    // Note: dmem is instantiated inside core.v in this design
+    // I-Cache Signals
+    wire [31:0] icache_mem_addr;
+    wire icache_mem_req;
+    wire [31:0] icache_mem_rdata;
+    wire icache_mem_ready;
+    wire icache_stall;
+
     core u_core (
         .clk(clk),
         .rst_n(rst_n),
         .instr(instr),
+        .instr_gnt(!icache_stall), // Grant when not stalled
         .pc_addr(pc_addr)
     );
 
-    // Instantiate IMEM
-    imem u_imem (
-        .addr(pc_addr),
-        .data(instr)
+    icache u_icache (
+        .clk(clk),
+        .rst_n(rst_n),
+        .cpu_addr(pc_addr),
+        .cpu_instr(instr),
+        .cpu_stall(icache_stall),
+        .mem_addr(icache_mem_addr),
+        .mem_req(icache_mem_req),
+        .mem_rdata(icache_mem_rdata),
+        .mem_ready(icache_mem_ready)
     );
+
+    // Instantiate IMEM (Backing Store)
+    imem u_imem (
+        .addr(icache_mem_addr),
+        .data(icache_mem_rdata)
+    );
+
+    reg [2:0] mem_wait_counter;
+    reg mem_ready_reg;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            mem_wait_counter <= 0;
+            mem_ready_reg <= 0;
+        end else begin
+            if (icache_mem_req) begin
+                if (mem_wait_counter < 3) begin // 3 cycle latency
+                    mem_wait_counter <= mem_wait_counter + 1;
+                    mem_ready_reg <= 0;
+                end else begin
+                    mem_ready_reg <= 1;
+                end
+            end else begin
+                mem_wait_counter <= 0;
+                mem_ready_reg <= 0;
+            end
+        end
+    end
+    
+    // Better Latency Logic:
+    reg [31:0] last_mem_addr;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            mem_wait_counter <= 0;
+            mem_ready_reg <= 0;
+            last_mem_addr <= 32'hFFFFFFFF;
+        end else begin
+            if (icache_mem_req) begin
+                if (icache_mem_addr != last_mem_addr) begin
+                    // New request
+                    mem_wait_counter <= 0;
+                    mem_ready_reg <= 0;
+                    last_mem_addr <= icache_mem_addr;
+                end else begin
+                    // Continuing request
+                    if (mem_wait_counter < 2) begin // 2 cycle latency per word
+                        mem_wait_counter <= mem_wait_counter + 1;
+                        mem_ready_reg <= 0;
+                    end else begin
+                        mem_ready_reg <= 1;
+                    end
+                end
+            end else begin
+                mem_wait_counter <= 0;
+                mem_ready_reg <= 0;
+                // Don't reset last_mem_addr so we don't trigger on 0
+            end
+        end
+    end
+
+    assign icache_mem_ready = mem_ready_reg;
 
     // Expose signals for observation
     assign pc_out = pc_addr;
