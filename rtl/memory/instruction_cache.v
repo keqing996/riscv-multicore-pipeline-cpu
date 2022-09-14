@@ -1,17 +1,17 @@
-module icache (
+module instruction_cache (
     input wire clk,
     input wire rst_n,
 
     // CPU Interface
-    input wire [31:0] cpu_addr,
-    output reg [31:0] cpu_instr,
-    output reg cpu_stall, // 1 if miss (stall CPU), 0 if hit
+    input wire [31:0] program_counter_address,
+    output reg [31:0] instruction,
+    output reg stall_cpu, // 1 if miss (stall CPU), 0 if hit
 
     // Memory Interface (32-bit)
-    output reg [31:0] mem_addr,
-    output reg mem_req,
-    input wire [31:0] mem_rdata,
-    input wire mem_ready
+    output reg [31:0] instruction_memory_address,
+    output reg instruction_memory_request,
+    input wire [31:0] instruction_memory_read_data,
+    input wire instruction_memory_ready
 );
 
     // Parameters
@@ -26,9 +26,9 @@ module icache (
     reg [127:0] data_array [0:NUM_SETS-1]; // 16 bytes per block
 
     // Address Decomposition
-    wire [INDEX_BITS-1:0] index = cpu_addr[INDEX_BITS+OFFSET_BITS-1 : OFFSET_BITS];
-    wire [TAG_BITS-1:0] tag = cpu_addr[31 : 31-TAG_BITS+1];
-    wire [1:0] word_offset = cpu_addr[3:2];
+    wire [INDEX_BITS-1:0] index = program_counter_address[INDEX_BITS+OFFSET_BITS-1 : OFFSET_BITS];
+    wire [TAG_BITS-1:0] tag = program_counter_address[31 : 31-TAG_BITS+1];
+    wire [1:0] word_offset = program_counter_address[3:2];
 
     // Hit Detection
     wire valid_bit = valid[index];
@@ -68,7 +68,7 @@ module icache (
         end else begin
             state <= next_state;
             refill_buffer <= next_refill_buffer;
-            $display("ICache State: %d, Addr: %h, Stall: %b, Hit: %b, MemReady: %b", state, cpu_addr, cpu_stall, hit, mem_ready);
+            $display("ICache State: %d, Addr: %h, Stall: %b, Hit: %b, MemReady: %b", state, program_counter_address, stall_cpu, hit, instruction_memory_ready);
         end
     end
 
@@ -87,66 +87,66 @@ module icache (
         next_state = state;
         next_refill_buffer = refill_buffer;
         
-        cpu_stall = 0;
-        cpu_instr = 0;
-        mem_req = 0;
-        mem_addr = 0;
+        stall_cpu = 0;
+        instruction = 0;
+        instruction_memory_request = 0;
+        instruction_memory_address = 0;
 
         case (state)
             STATE_IDLE: begin
                 if (hit) begin
-                    cpu_stall = 0;
-                    cpu_instr = hit_data;
+                    stall_cpu = 0;
+                    instruction = hit_data;
                 end else begin
-                    $display("I-Cache Miss at %h", cpu_addr);
-                    cpu_stall = 1; // Stall!
+                    $display("I-Cache Miss at %h", program_counter_address);
+                    stall_cpu = 1; // Stall!
                     next_state = STATE_FETCH_0;
                 end
             end
 
             STATE_FETCH_0: begin
-                cpu_stall = 1;
-                mem_req = 1;
-                mem_addr = {cpu_addr[31:4], 4'b0000}; // Word 0
-                if (mem_ready) begin
-                    $display("I-Cache Fetch 0: %h = %h", mem_addr, mem_rdata);
-                    next_refill_buffer[31:0] = mem_rdata;
+                stall_cpu = 1;
+                instruction_memory_request = 1;
+                instruction_memory_address = {program_counter_address[31:4], 4'b0000}; // Word 0
+                if (instruction_memory_ready) begin
+                    $display("I-Cache Fetch 0: %h = %h", instruction_memory_address, instruction_memory_read_data);
+                    next_refill_buffer[31:0] = instruction_memory_read_data;
                     next_state = STATE_FETCH_1;
                 end
             end
 
             STATE_FETCH_1: begin
-                cpu_stall = 1;
-                mem_req = 1;
-                mem_addr = {cpu_addr[31:4], 4'b0100}; // Word 1
-                if (mem_ready) begin
-                    next_refill_buffer[63:32] = mem_rdata;
+                stall_cpu = 1;
+                instruction_memory_request = 1;
+                instruction_memory_address = {program_counter_address[31:4], 4'b0100}; // Word 1
+                if (instruction_memory_ready) begin
+                    next_refill_buffer[63:32] = instruction_memory_read_data;
                     next_state = STATE_FETCH_2;
                 end
             end
 
             STATE_FETCH_2: begin
-                cpu_stall = 1;
-                mem_req = 1;
-                mem_addr = {cpu_addr[31:4], 4'b1000}; // Word 2
-                if (mem_ready) begin
-                    next_refill_buffer[95:64] = mem_rdata;
+                stall_cpu = 1;
+                instruction_memory_request = 1;
+                instruction_memory_address = {program_counter_address[31:4], 4'b1000}; // Word 2
+                if (instruction_memory_ready) begin
+                    next_refill_buffer[95:64] = instruction_memory_read_data;
                     next_state = STATE_FETCH_3;
                 end
             end
 
             STATE_FETCH_3: begin
-                cpu_stall = 1;
-                mem_req = 1;
-                mem_addr = {cpu_addr[31:4], 4'b1100}; // Word 3
-                if (mem_ready) begin
-                    next_refill_buffer[127:96] = mem_rdata;
+                stall_cpu = 1;
+                instruction_memory_request = 1;
+                instruction_memory_address = {program_counter_address[31:4], 4'b1100}; // Word 3
+                if (instruction_memory_ready) begin
+                    next_refill_buffer[127:96] = instruction_memory_read_data;
                     next_state = STATE_UPDATE;
                 end
             end
 
             STATE_UPDATE: begin
-                cpu_stall = 1;
+                stall_cpu = 1;
                 // Write to cache
                 // We do this in the sequential block or here?
                 // Ideally we transition to IDLE and write.

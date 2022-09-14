@@ -1,11 +1,11 @@
 module timer (
     input wire clk,
     input wire rst_n,
-    input wire we,
-    input wire [31:0] addr,
-    input wire [31:0] wdata,
-    output reg [31:0] rdata,
-    output reg irq
+    input wire write_enable,
+    input wire [31:0] address,
+    input wire [31:0] write_data,
+    output reg [31:0] read_data,
+    output reg interrupt_request
 );
 
     // Memory Map
@@ -26,12 +26,12 @@ module timer (
             mtime <= mtime + 1;
 
             // Write Logic
-            if (we) begin
-                case (addr)
-                    32'h40004000: mtime[31:0]  <= wdata;
-                    32'h40004004: mtime[63:32] <= wdata;
-                    32'h40004008: mtimecmp[31:0]  <= wdata;
-                    32'h4000400C: mtimecmp[63:32] <= wdata;
+            if (write_enable) begin
+                case (address)
+                    32'h40004000: mtime[31:0]  <= write_data;
+                    32'h40004004: mtime[63:32] <= write_data;
+                    32'h40004008: mtimecmp[31:0]  <= write_data;
+                    32'h4000400C: mtimecmp[63:32] <= write_data;
                 endcase
             end
         end
@@ -39,21 +39,21 @@ module timer (
 
     // Read Logic
     always @(*) begin
-        case (addr)
-            32'h40004000: rdata = mtime[31:0];
-            32'h40004004: rdata = mtime[63:32];
-            32'h40004008: rdata = mtimecmp[31:0];
-            32'h4000400C: rdata = mtimecmp[63:32];
-            default:      rdata = 32'b0;
+        case (address)
+            32'h40004000: read_data = mtime[31:0];
+            32'h40004004: read_data = mtime[63:32];
+            32'h40004008: read_data = mtimecmp[31:0];
+            32'h4000400C: read_data = mtimecmp[63:32];
+            default:      read_data = 32'b0;
         endcase
     end
 
     // Interrupt Logic
     always @(*) begin
         if (mtime >= mtimecmp) begin
-            irq = 1'b1;
+            interrupt_request = 1'b1;
         end else begin
-            irq = 1'b0;
+            interrupt_request = 1'b0;
         end
     end
 

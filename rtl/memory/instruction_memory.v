@@ -1,6 +1,6 @@
-module imem (
-    input wire [31:0] addr, // Address from PC
-    output wire [31:0] data // Instruction
+module instruction_memory (
+    input wire [31:0] address, // Address from PC
+    output wire [31:0] read_data // Instruction
 );
 
     // Define memory: 8M words (32MB)
@@ -9,6 +9,6 @@ module imem (
     // Read logic (Combinational / Asynchronous read)
     // RISC-V instructions are 4-byte aligned.
     // We use addr[24:2] to index the word array.
-    assign data = memory[addr[24:2]];
+    assign read_data = memory[address[24:2]];
 
 endmodule
