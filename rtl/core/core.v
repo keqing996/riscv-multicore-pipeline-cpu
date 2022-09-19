@@ -1,9 +1,9 @@
 module core (
     input wire clk,
     input wire rst_n,
-    input wire [31:0] instr,   // Instruction from IMEM (IF stage)
-    input wire instr_gnt,      // Instruction Grant (Cache Hit/Ready)
-    output wire [31:0] pc_addr // PC output to IMEM
+    input wire [31:0] instruction,   // Instruction from IMEM (IF stage)
+    input wire instruction_grant,      // Instruction Grant (Cache Hit/Ready)
+    output wire [31:0] program_counter_address // PC output to IMEM
 );
 
     // =========================================================================
@@ -11,188 +11,188 @@ module core (
     // =========================================================================
 
     // --- IF Stage Signals ---
-    wire [31:0] pc_next;
-    wire [31:0] pc_curr;
-    wire [31:0] if_instr; // Instruction in IF stage
+    wire [31:0] program_counter_next;
+    wire [31:0] program_counter_current;
+    wire [31:0] fetch_stage_instruction; // Instruction in IF stage
 
     // Branch Prediction Signals
-    wire predict_taken;
-    wire [31:0] predict_target;
+    wire prediction_taken;
+    wire [31:0] prediction_target;
 
     // --- IF/ID Pipeline Registers ---
-    reg [31:0] if_id_pc;
-    reg [31:0] if_id_instr;
-    reg if_id_predict_taken;
-    reg [31:0] if_id_predict_target;
+    reg [31:0] if_id_program_counter;
+    reg [31:0] if_id_instruction;
+    reg if_id_prediction_taken;
+    reg [31:0] if_id_prediction_target;
 
     // --- ID Stage Signals ---
     wire [6:0] opcode;
-    wire [2:0] funct3;
-    wire [6:0] funct7;
-    wire [4:0] rd_id;
-    wire [4:0] rs1_id;
-    wire [4:0] rs2_id;
-    wire [31:0] imm_id;
-    wire [31:0] rs1_data_id;
-    wire [31:0] rs2_data_id;
+    wire [2:0] function_3;
+    wire [6:0] function_7;
+    wire [4:0] rd_index_decode;
+    wire [4:0] rs1_index_decode;
+    wire [4:0] rs2_index_decode;
+    wire [31:0] immediate_decode;
+    wire [31:0] rs1_data_decode;
+    wire [31:0] rs2_data_decode;
     
     // Control Signals (ID)
-    wire branch_id;
-    wire jump_id;
-    wire mem_read_id;
-    wire mem_to_reg_id;
-    wire [2:0] alu_op_id;
-    wire mem_write_id;
-    wire alu_src_id;
-    wire reg_write_id;
-    wire alu_src_a_id; // For JALR/AUIPC etc if needed, or just use 0
-    wire csr_we_id;
-    wire csr_to_reg_id;
-    wire is_mret_id;
-    wire is_ecall_id;
-    wire is_jalr_id = (opcode == 7'b1100111); // Added
+    wire branch_decode;
+    wire jump_decode;
+    wire memory_read_enable_decode;
+    wire memory_to_register_select_decode;
+    wire [2:0] alu_operation_code_decode;
+    wire memory_write_enable_decode;
+    wire alu_source_select_decode;
+    wire register_write_enable_decode;
+    wire alu_source_a_select_decode; // For JALR/AUIPC etc if needed, or just use 0
+    wire csr_write_enable_decode;
+    wire csr_to_register_select_decode;
+    wire is_machine_return_decode;
+    wire is_environment_call_decode;
+    wire is_jalr_decode = (opcode == 7'b1100111); // Added
 
     // Hazard / Stall Signals
-    wire stall;
-    wire stall_if; // Stall due to I-Cache miss
-    wire flush_branch; // Flush due to branch taken
-    wire flush_jump;   // Flush due to jump (JAL/JALR)
-    wire flush_trap;   // Flush due to trap/interrupt
+    wire stall_pipeline;
+    wire stall_fetch_stage; // Stall due to I-Cache miss
+    wire flush_due_to_branch; // Flush due to branch taken
+    wire flush_due_to_jump;   // Flush due to jump (JAL/JALR)
+    wire flush_due_to_trap;   // Flush due to trap/interrupt
 
-    assign stall_if = !instr_gnt;
-    wire stall_global = stall || stall_if; // Global stall condition (for PC and IF/ID)
-    wire stall_backend = stall_if;         // Backend stall (only for Cache Miss)
+    assign stall_fetch_stage = !instruction_grant;
+    wire stall_global = stall_pipeline || stall_fetch_stage; // Global stall condition (for PC and IF/ID)
+    wire stall_backend = stall_fetch_stage;         // Backend stall (only for Cache Miss)
 
     // --- ID/EX Pipeline Registers ---
-    reg [31:0] id_ex_pc;
-    reg id_ex_predict_taken;
-    reg [31:0] id_ex_predict_target;
+    reg [31:0] id_ex_program_counter;
+    reg id_ex_prediction_taken;
+    reg [31:0] id_ex_prediction_target;
     reg [31:0] id_ex_rs1_data;
     reg [31:0] id_ex_rs2_data;
-    reg [31:0] id_ex_imm;
-    reg [4:0]  id_ex_rs1;
-    reg [4:0]  id_ex_rs2;
-    reg [4:0]  id_ex_rd;
-    reg [2:0]  id_ex_funct3; // For ALU control and Branch
-    reg [6:0]  id_ex_funct7; // For ALU control
+    reg [31:0] id_ex_immediate;
+    reg [4:0]  id_ex_rs1_index;
+    reg [4:0]  id_ex_rs2_index;
+    reg [4:0]  id_ex_rd_index;
+    reg [2:0]  id_ex_function_3; // For ALU control and Branch
+    reg [6:0]  id_ex_function_7; // For ALU control
 
     // Control Signals (ID/EX)
     reg id_ex_branch;
     reg id_ex_jump;
-    reg id_ex_mem_read;
-    reg id_ex_mem_to_reg;
-    reg [2:0] id_ex_alu_op;
-    reg id_ex_mem_write;
-    reg id_ex_alu_src;
-    reg id_ex_reg_write;
-    reg id_ex_alu_src_a;
-    reg id_ex_csr_we;
-    reg id_ex_csr_to_reg;
-    reg id_ex_is_mret;
-    reg id_ex_is_ecall;
+    reg id_ex_memory_read_enable;
+    reg id_ex_memory_to_register_select;
+    reg [2:0] id_ex_alu_operation_code;
+    reg id_ex_memory_write_enable;
+    reg id_ex_alu_source_select;
+    reg id_ex_register_write_enable;
+    reg id_ex_alu_source_a_select;
+    reg id_ex_csr_write_enable;
+    reg id_ex_csr_to_register_select;
+    reg id_ex_is_machine_return;
+    reg id_ex_is_environment_call;
     reg id_ex_is_jalr; // Added
-    reg [31:0] id_ex_csr_rdata; // Pass read CSR data to EX/MEM/WB? 
+    reg [31:0] id_ex_csr_read_data; // Pass read CSR data to EX/MEM/WB? 
                                 // Actually CSR read happens in ID, so we pass data down.
 
     // --- EX Stage Signals ---
-    wire [31:0] alu_result_ex;
-    wire [3:0] alu_ctrl_ex;
-    wire [31:0] alu_in_a_ex;
-    wire [31:0] alu_in_b_ex;
-    wire [31:0] forward_a_val;
-    wire [31:0] forward_b_val;
-    wire [1:0] forward_a;
-    wire [1:0] forward_b;
-    wire [31:0] branch_target_ex;
-    wire branch_taken_ex;
+    wire [31:0] alu_result_execute;
+    wire [3:0] alu_control_code_execute;
+    wire [31:0] alu_input_a_execute;
+    wire [31:0] alu_input_b_execute;
+    wire [31:0] forward_a_value;
+    wire [31:0] forward_b_value;
+    wire [1:0] forward_a_select;
+    wire [1:0] forward_b_select;
+    wire [31:0] branch_target_execute;
+    wire branch_taken_execute;
 
     // --- EX/MEM Pipeline Registers ---
     reg [31:0] ex_mem_alu_result;
     reg [31:0] ex_mem_rs2_data; // For Store (after forwarding)
-    reg [4:0]  ex_mem_rd;
-    reg [2:0]  ex_mem_funct3; // For Load/Store size
+    reg [4:0]  ex_mem_rd_index;
+    reg [2:0]  ex_mem_function_3; // For Load/Store size
 
     // Control Signals (EX/MEM)
-    reg ex_mem_mem_read;
-    reg ex_mem_mem_to_reg;
-    reg ex_mem_mem_write;
-    reg ex_mem_reg_write;
-    reg ex_mem_csr_to_reg;
-    reg [31:0] ex_mem_csr_rdata;
+    reg ex_mem_memory_read_enable;
+    reg ex_mem_memory_to_register_select;
+    reg ex_mem_memory_write_enable;
+    reg ex_mem_register_write_enable;
+    reg ex_mem_csr_to_register_select;
+    reg [31:0] ex_mem_csr_read_data;
 
     // --- MEM Stage Signals ---
-    wire [31:0] dmem_rdata_raw;
-    wire [31:0] dmem_rdata_aligned;
-    wire [31:0] timer_rdata;
-    wire [31:0] mem_rdata_final;
-    wire [31:0] dmem_wdata;
-    wire [3:0] dmem_byte_enable;
-    wire is_timer_addr;
-    wire is_uart_addr;
-    wire timer_irq;
+    wire [31:0] data_memory_read_data_raw;
+    wire [31:0] data_memory_read_data_aligned;
+    wire [31:0] timer_read_data;
+    wire [31:0] memory_read_data_final;
+    wire [31:0] data_memory_write_data;
+    wire [3:0] data_memory_byte_enable;
+    wire is_timer_address;
+    wire is_uart_address;
+    wire timer_interrupt_request;
 
     // --- MEM/WB Pipeline Registers ---
-    reg [31:0] mem_wb_rdata;
+    reg [31:0] mem_wb_read_data;
     reg [31:0] mem_wb_alu_result;
-    reg [4:0]  mem_wb_rd;
-    reg [31:0] mem_wb_csr_rdata;
+    reg [4:0]  mem_wb_rd_index;
+    reg [31:0] mem_wb_csr_read_data;
 
     // Control Signals (MEM/WB)
-    reg mem_wb_mem_to_reg;
-    reg mem_wb_reg_write;
-    reg mem_wb_csr_to_reg;
+    reg mem_wb_memory_to_register_select;
+    reg mem_wb_register_write_enable;
+    reg mem_wb_csr_to_register_select;
 
     // --- WB Stage Signals ---
-    wire [31:0] wdata_wb;
+    wire [31:0] write_data_writeback;
 
     // =========================================================================
     // IF Stage
     // =========================================================================
     
     // PC Instance
-    pc u_pc (
+    program_counter u_program_counter (
         .clk(clk),
         .rst_n(rst_n),
-        .din(pc_next),
-        .dout(pc_curr)
+        .data_in(program_counter_next),
+        .data_out(program_counter_current)
     );
 
-    assign pc_addr = pc_curr;
-    assign if_instr = instr;
+    assign program_counter_address = program_counter_current;
+    assign fetch_stage_instruction = instruction;
 
     // Branch Predictor
     // Note: Inputs from EX stage are feedback
-    wire [31:0] jalr_target_ex; // Forward declaration
+    wire [31:0] jalr_target_execute; // Forward declaration
     branch_predictor u_branch_predictor (
         .clk(clk),
         .rst_n(rst_n),
-        .pc_if(pc_curr),
-        .predict_taken(predict_taken),
-        .predict_target(predict_target),
-        .pc_ex(id_ex_pc),
-        .branch_taken_ex(branch_taken_ex || id_ex_jump), 
-        .branch_target_ex((id_ex_jump && id_ex_is_jalr) ? jalr_target_ex : branch_target_ex),
-        .is_branch_ex(id_ex_branch),
-        .is_jump_ex(id_ex_jump)
+        .program_counter_fetch(program_counter_current),
+        .prediction_taken(prediction_taken),
+        .prediction_target(prediction_target),
+        .program_counter_execute(id_ex_program_counter),
+        .branch_taken_execute(branch_taken_execute || id_ex_jump), 
+        .branch_target_execute((id_ex_jump && id_ex_is_jalr) ? jalr_target_execute : branch_target_execute),
+        .is_branch_execute(id_ex_branch),
+        .is_jump_execute(id_ex_jump)
     );
 
     // IF/ID Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            if_id_pc <= 0;
-            if_id_instr <= 0; // NOP
-            if_id_predict_taken <= 0;
-            if_id_predict_target <= 0;
-        end else if (flush_branch || flush_jump || flush_trap) begin
-            if_id_pc <= 0;
-            if_id_instr <= 0; // Flush -> NOP
-            if_id_predict_taken <= 0;
-            if_id_predict_target <= 0;
+            if_id_program_counter <= 0;
+            if_id_instruction <= 0; // NOP
+            if_id_prediction_taken <= 0;
+            if_id_prediction_target <= 0;
+        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap) begin
+            if_id_program_counter <= 0;
+            if_id_instruction <= 0; // Flush -> NOP
+            if_id_prediction_taken <= 0;
+            if_id_prediction_target <= 0;
         end else if (!stall_global) begin
-            if_id_pc <= pc_curr;
-            if_id_instr <= if_instr;
-            if_id_predict_taken <= predict_taken;
-            if_id_predict_target <= predict_target;
+            if_id_program_counter <= program_counter_current;
+            if_id_instruction <= fetch_stage_instruction;
+            if_id_prediction_taken <= prediction_taken;
+            if_id_prediction_target <= prediction_target;
         end
         // If stall, hold value
     end
@@ -202,163 +202,163 @@ module core (
     // =========================================================================
 
     // Decoder
-    decoder u_decoder (
-        .instr(if_id_instr),
+    instruction_decoder u_instruction_decoder (
+        .instruction(if_id_instruction),
         .opcode(opcode),
-        .funct3(funct3),
-        .funct7(funct7),
-        .rd(rd_id),
-        .rs1(rs1_id),
-        .rs2(rs2_id)
+        .function_3(function_3),
+        .function_7(function_7),
+        .rd(rd_index_decode),
+        .rs1(rs1_index_decode),
+        .rs2(rs2_index_decode)
     );
 
     // Control Unit
     control_unit u_control_unit (
         .opcode(opcode),
-        .funct3(funct3),
-        .rs1_addr(rs1_id),
-        .branch(branch_id),
-        .jump(jump_id),
-        .mem_read(mem_read_id),
-        .mem_to_reg(mem_to_reg_id),
-        .alu_op(alu_op_id),
-        .mem_write(mem_write_id),
-        .alu_src(alu_src_id),
-        .reg_write(reg_write_id),
-        .alu_src_a(alu_src_a_id),
-        .csr_we(csr_we_id),
-        .csr_to_reg(csr_to_reg_id),
-        .is_mret(is_mret_id),
-        .is_ecall(is_ecall_id)
+        .function_3(function_3),
+        .rs1_index(rs1_index_decode),
+        .branch(branch_decode),
+        .jump(jump_decode),
+        .memory_read_enable(memory_read_enable_decode),
+        .memory_to_register_select(memory_to_register_select_decode),
+        .alu_operation_code(alu_operation_code_decode),
+        .memory_write_enable(memory_write_enable_decode),
+        .alu_source_select(alu_source_select_decode),
+        .register_write_enable(register_write_enable_decode),
+        .alu_source_a_select(alu_source_a_select_decode),
+        .csr_write_enable(csr_write_enable_decode),
+        .csr_to_register_select(csr_to_register_select_decode),
+        .is_machine_return(is_machine_return_decode),
+        .is_environment_call(is_environment_call_decode)
     );
 
     // Register File
     // Note: Writes come from WB stage
     regfile u_regfile (
         .clk(clk),
-        .we(mem_wb_reg_write), // Write Enable from WB
-        .rs1_addr(rs1_id),
-        .rs2_addr(rs2_id),
-        .rd_addr(mem_wb_rd),   // Write Address from WB
-        .wdata(wdata_wb),      // Write Data from WB
-        .rs1_data(rs1_data_id),
-        .rs2_data(rs2_data_id)
+        .write_enable(mem_wb_register_write_enable), // Write Enable from WB
+        .rs1_index(rs1_index_decode),
+        .rs2_index(rs2_index_decode),
+        .rd_index(mem_wb_rd_index),   // Write Address from WB
+        .write_data(write_data_writeback),      // Write Data from WB
+        .rs1_read_data(rs1_data_decode),
+        .rs2_read_data(rs2_data_decode)
     );
 
     // Immediate Generator
-    imm_gen u_imm_gen (
-        .instr(if_id_instr),
-        .imm(imm_id)
+    immediate_generator u_immediate_generator (
+        .instruction(if_id_instruction),
+        .immediate(immediate_decode)
     );
 
     // CSR File
-    wire [31:0] csr_rdata_id;
+    wire [31:0] csr_read_data_decode;
     wire [31:0] mtvec;
     wire [31:0] mepc;
-    wire interrupt_en;
+    wire interrupt_enable;
     
-    csr_file u_csr_file (
+    control_status_register_file u_control_status_register_file (
         .clk(clk),
         .rst_n(rst_n),
-        .csr_addr(imm_id[11:0]), // CSR address is in imm field
-        .csr_we(csr_we_id && !stall && !flush_branch), // Only write if valid
-        .csr_wdata(rs1_data_id), // Data to write to CSR
-        .csr_rdata(csr_rdata_id),
-        .exception_en(is_ecall_id && !stall && !flush_branch),
-        .exception_pc(if_id_pc), // PC of current instruction (for MEPC)
+        .csr_address(immediate_decode[11:0]), // CSR address is in imm field
+        .csr_write_enable(csr_write_enable_decode && !stall_pipeline && !flush_due_to_branch), // Only write if valid
+        .csr_write_data(rs1_data_decode), // Data to write to CSR
+        .csr_read_data(csr_read_data_decode),
+        .exception_enable(is_environment_call_decode && !stall_pipeline && !flush_due_to_branch),
+        .exception_program_counter(if_id_program_counter), // PC of current instruction (for MEPC)
         .exception_cause(32'd11), // ECALL cause
-        .mret_en(is_mret_id && !stall && !flush_branch),
-        .timer_irq(timer_irq),
+        .machine_return_enable(is_machine_return_decode && !stall_pipeline && !flush_due_to_branch),
+        .timer_interrupt_request(timer_interrupt_request),
         .mtvec_out(mtvec),
         .mepc_out(mepc),
-        .interrupt_en(interrupt_en)
+        .interrupt_enable(interrupt_enable)
     );
 
     // Hazard Detection Unit
-    hazard_detection_unit u_hazard_detection (
-        .rs1_id(rs1_id),
-        .rs2_id(rs2_id),
-        .rd_ex(id_ex_rd),
-        .mem_read_ex(id_ex_mem_read),
-        .stall(stall)
+    hazard_detection_unit u_hazard_detection_unit (
+        .rs1_index_decode(rs1_index_decode),
+        .rs2_index_decode(rs2_index_decode),
+        .rd_index_execute(id_ex_rd_index),
+        .memory_read_enable_execute(id_ex_memory_read_enable),
+        .stall_pipeline(stall_pipeline)
     );
 
     // ID/EX Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            id_ex_pc <= 0;
-            id_ex_predict_taken <= 0;
-            id_ex_predict_target <= 0;
+            id_ex_program_counter <= 0;
+            id_ex_prediction_taken <= 0;
+            id_ex_prediction_target <= 0;
             id_ex_rs1_data <= 0;
             id_ex_rs2_data <= 0;
-            id_ex_imm <= 0;
-            id_ex_rs1 <= 0;
-            id_ex_rs2 <= 0;
-            id_ex_rd <= 0;
-            id_ex_funct3 <= 0;
-            id_ex_funct7 <= 0;
+            id_ex_immediate <= 0;
+            id_ex_rs1_index <= 0;
+            id_ex_rs2_index <= 0;
+            id_ex_rd_index <= 0;
+            id_ex_function_3 <= 0;
+            id_ex_function_7 <= 0;
             // Control
             id_ex_branch <= 0;
             id_ex_jump <= 0;
-            id_ex_mem_read <= 0;
-            id_ex_mem_to_reg <= 0;
-            id_ex_alu_op <= 0;
-            id_ex_mem_write <= 0;
-            id_ex_alu_src <= 0;
-            id_ex_reg_write <= 0;
-            id_ex_alu_src_a <= 0;
-            id_ex_csr_we <= 0;
-            id_ex_csr_to_reg <= 0;
-            id_ex_is_mret <= 0;
-            id_ex_is_ecall <= 0;
+            id_ex_memory_read_enable <= 0;
+            id_ex_memory_to_register_select <= 0;
+            id_ex_alu_operation_code <= 0;
+            id_ex_memory_write_enable <= 0;
+            id_ex_alu_source_select <= 0;
+            id_ex_register_write_enable <= 0;
+            id_ex_alu_source_a_select <= 0;
+            id_ex_csr_write_enable <= 0;
+            id_ex_csr_to_register_select <= 0;
+            id_ex_is_machine_return <= 0;
+            id_ex_is_environment_call <= 0;
             id_ex_is_jalr <= 0;
-            id_ex_csr_rdata <= 0;
-        end else if (flush_branch || flush_jump || flush_trap || stall || stall_if) begin
+            id_ex_csr_read_data <= 0;
+        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline || stall_fetch_stage) begin
             // Flush ID/EX (Insert Bubble)
             id_ex_branch <= 0;
             id_ex_jump <= 0;
-            id_ex_mem_read <= 0;
-            id_ex_mem_write <= 0;
-            id_ex_reg_write <= 0;
-            id_ex_csr_we <= 0;
-            id_ex_is_mret <= 0;
-            id_ex_is_ecall <= 0;
+            id_ex_memory_read_enable <= 0;
+            id_ex_memory_write_enable <= 0;
+            id_ex_register_write_enable <= 0;
+            id_ex_csr_write_enable <= 0;
+            id_ex_is_machine_return <= 0;
+            id_ex_is_environment_call <= 0;
             id_ex_is_jalr <= 0;
             
             // Clear prediction info to avoid false mispredicts on bubbles
-            id_ex_predict_taken <= 0;
-            id_ex_predict_target <= 0;
-            id_ex_pc <= 0; 
+            id_ex_prediction_taken <= 0;
+            id_ex_prediction_target <= 0;
+            id_ex_program_counter <= 0; 
             
             // Others don't matter if reg_write/mem_write are 0
         end else begin
-            id_ex_pc <= if_id_pc;
-            id_ex_predict_taken <= if_id_predict_taken;
-            id_ex_predict_target <= if_id_predict_target;
-            id_ex_rs1_data <= rs1_data_id;
-            id_ex_rs2_data <= rs2_data_id;
-            id_ex_imm <= imm_id;
-            id_ex_rs1 <= rs1_id;
-            id_ex_rs2 <= rs2_id;
-            id_ex_rd <= rd_id;
-            id_ex_funct3 <= funct3;
-            id_ex_funct7 <= funct7;
+            id_ex_program_counter <= if_id_program_counter;
+            id_ex_prediction_taken <= if_id_prediction_taken;
+            id_ex_prediction_target <= if_id_prediction_target;
+            id_ex_rs1_data <= rs1_data_decode;
+            id_ex_rs2_data <= rs2_data_decode;
+            id_ex_immediate <= immediate_decode;
+            id_ex_rs1_index <= rs1_index_decode;
+            id_ex_rs2_index <= rs2_index_decode;
+            id_ex_rd_index <= rd_index_decode;
+            id_ex_function_3 <= function_3;
+            id_ex_function_7 <= function_7;
             // Control
-            id_ex_branch <= branch_id;
-            id_ex_jump <= jump_id;
-            id_ex_mem_read <= mem_read_id;
-            id_ex_mem_to_reg <= mem_to_reg_id;
-            id_ex_alu_op <= alu_op_id;
-            id_ex_mem_write <= mem_write_id;
-            id_ex_alu_src <= alu_src_id;
-            id_ex_reg_write <= reg_write_id;
-            id_ex_alu_src_a <= alu_src_a_id;
-            id_ex_csr_we <= csr_we_id;
-            id_ex_csr_to_reg <= csr_to_reg_id;
-            id_ex_is_mret <= is_mret_id;
-            id_ex_is_ecall <= is_ecall_id;
-            id_ex_is_jalr <= is_jalr_id;
-            id_ex_csr_rdata <= csr_rdata_id;
+            id_ex_branch <= branch_decode;
+            id_ex_jump <= jump_decode;
+            id_ex_memory_read_enable <= memory_read_enable_decode;
+            id_ex_memory_to_register_select <= memory_to_register_select_decode;
+            id_ex_alu_operation_code <= alu_operation_code_decode;
+            id_ex_memory_write_enable <= memory_write_enable_decode;
+            id_ex_alu_source_select <= alu_source_select_decode;
+            id_ex_register_write_enable <= register_write_enable_decode;
+            id_ex_alu_source_a_select <= alu_source_a_select_decode;
+            id_ex_csr_write_enable <= csr_write_enable_decode;
+            id_ex_csr_to_register_select <= csr_to_register_select_decode;
+            id_ex_is_machine_return <= is_machine_return_decode;
+            id_ex_is_environment_call <= is_environment_call_decode;
+            id_ex_is_jalr <= is_jalr_decode;
+            id_ex_csr_read_data <= csr_read_data_decode;
         end
     end
 
@@ -367,120 +367,120 @@ module core (
     // =========================================================================
 
     // Forwarding Unit
-    forwarding_unit u_forwarding (
-        .rs1_ex(id_ex_rs1),
-        .rs2_ex(id_ex_rs2),
-        .rd_mem(ex_mem_rd),
-        .reg_write_mem(ex_mem_reg_write),
-        .rd_wb(mem_wb_rd),
-        .reg_write_wb(mem_wb_reg_write),
-        .forward_a(forward_a),
-        .forward_b(forward_b)
+    forwarding_unit u_forwarding_unit (
+        .rs1_index_execute(id_ex_rs1_index),
+        .rs2_index_execute(id_ex_rs2_index),
+        .rd_index_memory(ex_mem_rd_index),
+        .register_write_enable_memory(ex_mem_register_write_enable),
+        .rd_index_writeback(mem_wb_rd_index),
+        .register_write_enable_writeback(mem_wb_register_write_enable),
+        .forward_a_select(forward_a_select),
+        .forward_b_select(forward_b_select)
     );
 
     // ALU Input Muxes (Forwarding)
-    assign forward_a_val = (forward_a == 2'b10) ? ex_mem_alu_result :
-                           (forward_a == 2'b01) ? wdata_wb :
+    assign forward_a_value = (forward_a_select == 2'b10) ? ex_mem_alu_result :
+                           (forward_a_select == 2'b01) ? write_data_writeback :
                            id_ex_rs1_data;
 
-    assign forward_b_val = (forward_b == 2'b10) ? ex_mem_alu_result :
-                           (forward_b == 2'b01) ? wdata_wb :
+    assign forward_b_value = (forward_b_select == 2'b10) ? ex_mem_alu_result :
+                           (forward_b_select == 2'b01) ? write_data_writeback :
                            id_ex_rs2_data;
 
     // ALU Source Muxes (Immediate vs Register)
-    assign alu_in_a_ex = id_ex_alu_src_a ? id_ex_pc : forward_a_val;
-    assign alu_in_b_ex = id_ex_alu_src   ? id_ex_imm : forward_b_val;
+    assign alu_input_a_execute = id_ex_alu_source_a_select ? id_ex_program_counter : forward_a_value;
+    assign alu_input_b_execute = id_ex_alu_source_select   ? id_ex_immediate : forward_b_value;
 
     // ALU Control
-    alu_control u_alu_control (
-        .alu_op(id_ex_alu_op),
-        .funct3(id_ex_funct3),
-        .funct7(id_ex_funct7),
-        .alu_ctrl(alu_ctrl_ex)
+    alu_control_unit u_alu_control_unit (
+        .alu_operation_code(id_ex_alu_operation_code),
+        .function_3(id_ex_function_3),
+        .function_7(id_ex_function_7),
+        .alu_control_code(alu_control_code_execute)
     );
 
     // ALU
-    wire [31:0] alu_out_ex;
+    wire [31:0] alu_output_execute;
     alu u_alu (
-        .a(alu_in_a_ex),
-        .b(alu_in_b_ex),
-        .alu_ctrl(alu_ctrl_ex),
-        .result(alu_out_ex)
+        .a(alu_input_a_execute),
+        .b(alu_input_b_execute),
+        .alu_control_code(alu_control_code_execute),
+        .result(alu_output_execute)
     );
 
-    assign alu_result_ex = id_ex_jump ? (id_ex_pc + 32'd4) : alu_out_ex;
+    assign alu_result_execute = id_ex_jump ? (id_ex_program_counter + 32'd4) : alu_output_execute;
 
     // Branch Logic
     // Calculate Branch Target
-    assign branch_target_ex = id_ex_pc + id_ex_imm;
+    assign branch_target_execute = id_ex_program_counter + id_ex_immediate;
 
     // Branch Condition Check
-    wire branch_cond;
+    wire branch_condition_met;
     branch_unit u_branch_unit (
-        .funct3(id_ex_funct3),
-        .a(forward_a_val),
-        .b(forward_b_val),
-        .branch_taken(branch_cond)
+        .function_3(id_ex_function_3),
+        .operand_a(forward_a_value),
+        .operand_b(forward_b_value),
+        .branch_condition_met(branch_condition_met)
     );
 
-    assign branch_taken_ex = (id_ex_branch && branch_cond);
+    assign branch_taken_execute = (id_ex_branch && branch_condition_met);
     
     // Jump Logic (JAL/JALR)
     // JAL target = PC + imm (calculated in branch_target_ex)
     // JALR target = (rs1 + imm) & ~1
-    assign jalr_target_ex = (forward_a_val + id_ex_imm) & 32'hFFFFFFFE;
+    assign jalr_target_execute = (forward_a_value + id_ex_immediate) & 32'hFFFFFFFE;
     
     // Flush signals
     // Misprediction Logic
-    wire actual_taken = branch_taken_ex || id_ex_jump;
-    wire [31:0] actual_target = (id_ex_jump && id_ex_is_jalr) ? jalr_target_ex : branch_target_ex;
-    wire is_control_ex = id_ex_branch || id_ex_jump;
+    wire actual_taken = branch_taken_execute || id_ex_jump;
+    wire [31:0] actual_target = (id_ex_jump && id_ex_is_jalr) ? jalr_target_execute : branch_target_execute;
+    wire is_control_execute = id_ex_branch || id_ex_jump;
 
     wire mispredict = 
-        (is_control_ex && (id_ex_predict_taken != actual_taken)) || 
-        (is_control_ex && id_ex_predict_taken && (id_ex_predict_target != actual_target)) ||
-        (!is_control_ex && id_ex_predict_taken);
+        (is_control_execute && (id_ex_prediction_taken != actual_taken)) || 
+        (is_control_execute && id_ex_prediction_taken && (id_ex_prediction_target != actual_target)) ||
+        (!is_control_execute && id_ex_prediction_taken);
 
-    wire [31:0] correct_pc = actual_taken ? actual_target : (id_ex_pc + 4);
+    wire [31:0] correct_pc = actual_taken ? actual_target : (id_ex_program_counter + 4);
 
-    assign flush_branch = mispredict;
-    assign flush_jump   = 0; // Handled by mispredict
-    assign flush_trap   = interrupt_en || is_ecall_id || is_mret_id; // Flush on trap (from ID)
+    assign flush_due_to_branch = mispredict;
+    assign flush_due_to_jump   = 0; // Handled by mispredict
+    assign flush_due_to_trap   = interrupt_enable || is_environment_call_decode || is_machine_return_decode; // Flush on trap (from ID)
 
     // PC Next Logic
     // Priority: Reset > Interrupt > Exception > MRET > Mispredict > Prediction > Next
-    assign pc_next = interrupt_en ? mtvec :
-                     stall_global ? pc_curr : // Stall: Hold PC
-                     is_ecall_id  ? mtvec : // Exception (ECALL)
-                     is_mret_id   ? mepc :
+    assign program_counter_next = interrupt_enable ? mtvec :
+                     stall_global ? program_counter_current : // Stall: Hold PC
+                     is_environment_call_decode  ? mtvec : // Exception (ECALL)
+                     is_machine_return_decode   ? mepc :
                      mispredict ? correct_pc :
-                     predict_taken ? predict_target :
-                     (pc_curr + 4);
+                     prediction_taken ? prediction_target :
+                     (program_counter_current + 4);
 
     // EX/MEM Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             ex_mem_alu_result <= 0;
             ex_mem_rs2_data <= 0;
-            ex_mem_rd <= 0;
-            ex_mem_funct3 <= 0;
-            ex_mem_mem_read <= 0;
-            ex_mem_mem_to_reg <= 0;
-            ex_mem_mem_write <= 0;
-            ex_mem_reg_write <= 0;
-            ex_mem_csr_to_reg <= 0;
-            ex_mem_csr_rdata <= 0;
+            ex_mem_rd_index <= 0;
+            ex_mem_function_3 <= 0;
+            ex_mem_memory_read_enable <= 0;
+            ex_mem_memory_to_register_select <= 0;
+            ex_mem_memory_write_enable <= 0;
+            ex_mem_register_write_enable <= 0;
+            ex_mem_csr_to_register_select <= 0;
+            ex_mem_csr_read_data <= 0;
         end else if (!stall_global) begin
-            ex_mem_alu_result <= alu_result_ex;
-            ex_mem_rs2_data <= forward_b_val; // Store data (after forwarding)
-            ex_mem_rd <= id_ex_rd;
-            ex_mem_funct3 <= id_ex_funct3;
-            ex_mem_mem_read <= id_ex_mem_read;
-            ex_mem_mem_to_reg <= id_ex_mem_to_reg;
-            ex_mem_mem_write <= id_ex_mem_write;
-            ex_mem_reg_write <= id_ex_reg_write;
-            ex_mem_csr_to_reg <= id_ex_csr_to_reg;
-            ex_mem_csr_rdata <= id_ex_csr_rdata;
+            ex_mem_alu_result <= alu_result_execute;
+            ex_mem_rs2_data <= forward_b_value; // Store data (after forwarding)
+            ex_mem_rd_index <= id_ex_rd_index;
+            ex_mem_function_3 <= id_ex_function_3;
+            ex_mem_memory_read_enable <= id_ex_memory_read_enable;
+            ex_mem_memory_to_register_select <= id_ex_memory_to_register_select;
+            ex_mem_memory_write_enable <= id_ex_memory_write_enable;
+            ex_mem_register_write_enable <= id_ex_register_write_enable;
+            ex_mem_csr_to_register_select <= id_ex_csr_to_register_select;
+            ex_mem_csr_read_data <= id_ex_csr_read_data;
         end
     end
 
@@ -489,69 +489,69 @@ module core (
     // =========================================================================
 
     // Load Store Unit
-    load_store_unit u_lsu (
-        .addr(ex_mem_alu_result),
-        .wdata_in(ex_mem_rs2_data),
-        .mem_read(ex_mem_mem_read),
-        .mem_write(ex_mem_mem_write),
-        .funct3(ex_mem_funct3),
-        .dmem_rdata(dmem_rdata_raw),
-        .timer_rdata(timer_rdata),
-        .dmem_wdata(dmem_wdata),
-        .dmem_byte_enable(dmem_byte_enable),
-        .dmem_we(dmem_we),
-        .uart_we(uart_we),
-        .timer_we(timer_we),
-        .mem_rdata_final(mem_rdata_final)
+    load_store_unit u_load_store_unit (
+        .address(ex_mem_alu_result),
+        .write_data_in(ex_mem_rs2_data),
+        .memory_read_enable(ex_mem_memory_read_enable),
+        .memory_write_enable(ex_mem_memory_write_enable),
+        .function_3(ex_mem_function_3),
+        .data_memory_read_data(data_memory_read_data_raw),
+        .timer_read_data(timer_read_data),
+        .data_memory_write_data(data_memory_write_data),
+        .data_memory_byte_enable(data_memory_byte_enable),
+        .data_memory_write_enable(data_memory_write_enable),
+        .uart_write_enable(uart_write_enable),
+        .timer_write_enable(timer_write_enable),
+        .memory_read_data_final(memory_read_data_final)
     );
 
     // DMEM Instance
-    dmem u_dmem (
+    data_memory u_data_memory (
         .clk(clk),
-        .byte_enable(dmem_byte_enable),
-        .addr(ex_mem_alu_result),
-        .wdata(dmem_wdata),
-        .rdata(dmem_rdata_raw)
+        .byte_enable(data_memory_byte_enable),
+        .address(ex_mem_alu_result),
+        .write_data(data_memory_write_data),
+        .read_data(data_memory_read_data_raw)
     );
 
     // UART Instance
-    uart_sim u_uart_sim (
+    uart_simulator u_uart_simulator (
         .clk(clk),
-        .we(uart_we),
-        .addr(ex_mem_alu_result),
-        .wdata(ex_mem_rs2_data) 
+        .write_enable(uart_write_enable),
+        .address(ex_mem_alu_result),
+        .write_data(ex_mem_rs2_data) 
     );
 
     // Timer Instance
     timer u_timer (
         .clk(clk),
         .rst_n(rst_n),
-        .we(timer_we),
-        .addr(ex_mem_alu_result),
-        .wdata(ex_mem_rs2_data), 
-        .rdata(timer_rdata),
-        .irq(timer_irq)
+        .write_enable(timer_write_enable),
+        .address(ex_mem_alu_result),
+        .write_data(ex_mem_rs2_data), 
+        .read_data(timer_read_data),
+        .interrupt_request(timer_interrupt_request)
     );
 
 
     // MEM/WB Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            mem_wb_rdata <= 0;
+            mem_wb_read_data <= 0;
             mem_wb_alu_result <= 0;
-            mem_wb_rd <= 0;
-            mem_wb_mem_to_reg <= 0;
-            mem_wb_reg_write <= 0;
-            mem_wb_csr_to_reg <= 0;
-            mem_wb_csr_rdata <= 0;
+            mem_wb_rd_index <= 0;
+            mem_wb_memory_to_register_select <= 0;
+            mem_wb_register_write_enable <= 0;
+            mem_wb_csr_to_register_select <= 0;
+            mem_wb_csr_read_data <= 0;
         end else if (!stall_global) begin
-            mem_wb_rdata <= mem_rdata_final;
+            mem_wb_read_data <= memory_read_data_final;
             mem_wb_alu_result <= ex_mem_alu_result;
-            mem_wb_rd <= ex_mem_rd;
-            mem_wb_mem_to_reg <= ex_mem_mem_to_reg;
-            mem_wb_reg_write <= ex_mem_reg_write;
-            mem_wb_csr_to_reg <= ex_mem_csr_to_reg;
-            mem_wb_csr_rdata <= ex_mem_csr_rdata;
+            mem_wb_rd_index <= ex_mem_rd_index;
+            mem_wb_memory_to_register_select <= ex_mem_memory_to_register_select;
+            mem_wb_register_write_enable <= ex_mem_register_write_enable;
+            mem_wb_csr_to_register_select <= ex_mem_csr_to_register_select;
+            mem_wb_csr_read_data <= ex_mem_csr_read_data;
         end
     end
 
@@ -559,7 +559,7 @@ module core (
     // WB Stage
     // =========================================================================
 
-    assign wdata_wb = mem_wb_csr_to_reg ? mem_wb_csr_rdata :
-                      mem_wb_mem_to_reg ? mem_wb_rdata : 
+    assign write_data_writeback = mem_wb_csr_to_register_select ? mem_wb_csr_read_data :
+                      mem_wb_memory_to_register_select ? mem_wb_read_data : 
                       mem_wb_alu_result;
 endmodule

@@ -8,41 +8,41 @@ module system_top (
     output wire [31:0] alu_res_out
 );
 
-    wire [31:0] instr;
-    wire [31:0] pc_addr;
-    wire instr_gnt;
+    wire [31:0] instruction;
+    wire [31:0] program_counter_address;
+    wire instruction_grant;
 
     // I-Cache Signals
-    wire [31:0] icache_mem_addr;
-    wire icache_mem_req;
-    wire [31:0] icache_mem_rdata;
-    wire icache_mem_ready;
-    wire icache_stall;
+    wire [31:0] icache_memory_address;
+    wire icache_memory_request;
+    wire [31:0] icache_memory_read_data;
+    wire icache_memory_ready;
+    wire icache_stall_cpu;
 
     core u_core (
         .clk(clk),
         .rst_n(rst_n),
-        .instr(instr),
-        .instr_gnt(!icache_stall), // Grant when not stalled
-        .pc_addr(pc_addr)
+        .instruction(instruction),
+        .instruction_grant(!icache_stall_cpu), // Grant when not stalled
+        .program_counter_address(program_counter_address)
     );
 
-    icache u_icache (
+    instruction_cache u_instruction_cache (
         .clk(clk),
         .rst_n(rst_n),
-        .cpu_addr(pc_addr),
-        .cpu_instr(instr),
-        .cpu_stall(icache_stall),
-        .mem_addr(icache_mem_addr),
-        .mem_req(icache_mem_req),
-        .mem_rdata(icache_mem_rdata),
-        .mem_ready(icache_mem_ready)
+        .program_counter_address(program_counter_address),
+        .instruction(instruction),
+        .stall_cpu(icache_stall_cpu),
+        .instruction_memory_address(icache_memory_address),
+        .instruction_memory_request(icache_memory_request),
+        .instruction_memory_read_data(icache_memory_read_data),
+        .instruction_memory_ready(icache_memory_ready)
     );
 
     // Instantiate IMEM (Backing Store)
-    imem u_imem (
-        .addr(icache_mem_addr),
-        .data(icache_mem_rdata)
+    instruction_memory u_instruction_memory (
+        .address(icache_memory_address),
+        .read_data(icache_memory_read_data)
     );
 
     reg [2:0] mem_wait_counter;
@@ -53,7 +53,7 @@ module system_top (
             mem_wait_counter <= 0;
             mem_ready_reg <= 0;
         end else begin
-            if (icache_mem_req) begin
+            if (icache_memory_request) begin
                 if (mem_wait_counter < 3) begin // 3 cycle latency
                     mem_wait_counter <= mem_wait_counter + 1;
                     mem_ready_reg <= 0;
@@ -75,12 +75,12 @@ module system_top (
             mem_ready_reg <= 0;
             last_mem_addr <= 32'hFFFFFFFF;
         end else begin
-            if (icache_mem_req) begin
-                if (icache_mem_addr != last_mem_addr) begin
+            if (icache_memory_request) begin
+                if (icache_memory_address != last_mem_addr) begin
                     // New request
                     mem_wait_counter <= 0;
                     mem_ready_reg <= 0;
-                    last_mem_addr <= icache_mem_addr;
+                    last_mem_addr <= icache_memory_address;
                 end else begin
                     // Continuing request
                     if (mem_wait_counter < 2) begin // 2 cycle latency per word
@@ -98,20 +98,20 @@ module system_top (
         end
     end
 
-    assign icache_mem_ready = mem_ready_reg;
+    assign icache_memory_ready = mem_ready_reg;
 
     // Expose signals for observation
-    assign pc_out = pc_addr;
-    assign instr_out = instr;
-    assign alu_res_out = u_core.alu_result_ex; // Or whatever signal we want to trace
+    assign pc_out = program_counter_address;
+    assign instr_out = instruction;
+    assign alu_res_out = u_core.alu_result_execute; // Or whatever signal we want to trace
 
     // Memory Initialization
     // We use a parameter or a fixed filename. Cocotb will copy the specific hex file to "program.hex"
     initial begin
-        $readmemh("program.hex", u_imem.memory);
+        $readmemh("program.hex", u_instruction_memory.memory);
         // Load program into DMEM as well (for .rodata and .data)
         // Accessing dmem inside core
-        $readmemh("program.hex", u_core.u_dmem.memory);
+        $readmemh("program.hex", u_core.u_data_memory.memory);
     end
 
 endmodule
