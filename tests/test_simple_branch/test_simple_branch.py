@@ -12,7 +12,7 @@ async def test_simple_branch(dut):
     
     # Verification
     # Check x3 register (index 3)
-    reg_val = dut.u_core.u_regfile.regs[3].value
+    reg_val = dut.u_core.u_regfile.registers[3].value
     
     expected_val = 2
     assert reg_val == expected_val, f"Register x3 mismatch! Expected {expected_val}, got {reg_val}"

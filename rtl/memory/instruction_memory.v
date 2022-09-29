@@ -8,7 +8,7 @@ module instruction_memory (
 
     // Read logic (Combinational / Asynchronous read)
     // RISC-V instructions are 4-byte aligned.
-    // We use addr[24:2] to index the word array.
+    // We use address[24:2] to index the word array.
     assign read_data = memory[address[24:2]];
 
 endmodule

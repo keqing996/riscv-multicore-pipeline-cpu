@@ -12,7 +12,7 @@ async def test_simple_full(dut):
     
     # Verification
     # Check x4 register (index 4)
-    reg_val = dut.u_core.u_regfile.regs[4].value
+    reg_val = dut.u_core.u_regfile.registers[4].value
     
     expected_val = 12
     assert reg_val == expected_val, f"Register x4 mismatch! Expected {expected_val}, got {reg_val}"

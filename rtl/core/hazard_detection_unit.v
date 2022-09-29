@@ -9,8 +9,8 @@ module hazard_detection_unit (
 
     always @(*) begin
         // Load-Use Hazard Detection
-        // If instruction in EX is a Load, and its destination (rd_ex) matches
-        // either source register (rs1_id, rs2_id) in ID stage, we must stall.
+        // If instruction in EX is a Load, and its destination (rd_index_execute) matches
+        // either source register (rs1_index_decode, rs2_index_decode) in ID stage, we must stall.
         if (memory_read_enable_execute && (rd_index_execute != 0) && ((rd_index_execute == rs1_index_decode) || (rd_index_execute == rs2_index_decode))) begin
             stall_pipeline = 1'b1;
         end else begin

@@ -26,7 +26,7 @@ async def test_hazard(dut):
     
     # We expect PC to eventually reach 0x10 or more.
     
-    final_pc = int(dut.u_core.pc_curr.value)
+    final_pc = int(dut.u_core.program_counter_current.value)
     dut._log.info(f"Final PC: {final_pc}")
     
     assert final_pc > 0x08, f"PC stuck at {final_pc}, expected > 0x08"

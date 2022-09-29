@@ -13,8 +13,8 @@ async def test_simple_alu(dut):
     
     # Verification
     # Check x3 register (index 3)
-    # Hierarchy: system_top -> u_core -> u_regfile -> regs
-    reg_val = dut.u_core.u_regfile.regs[3].value
+    # Hierarchy: system_top -> u_core -> u_regfile -> registers
+    reg_val = dut.u_core.u_regfile.registers[3].value
     
     expected_val = 30
     assert reg_val == expected_val, f"Register x3 mismatch! Expected {expected_val}, got {reg_val}"
