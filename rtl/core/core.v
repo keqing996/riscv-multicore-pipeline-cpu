@@ -128,7 +128,7 @@ module core (
     reg [31:0] ex_mem_csr_read_data;
 
     // --- MEM Stage Signals ---
-    wire [31:0] data_memory_read_data_raw;
+    // wire [31:0] data_memory_read_data_raw; // Removed internal wire, using input port directly
     wire [31:0] data_memory_read_data_aligned;
     wire [31:0] timer_read_data;
     wire [31:0] memory_read_data_final;
@@ -502,7 +502,7 @@ module core (
         .memory_read_enable(ex_mem_memory_read_enable),
         .memory_write_enable(ex_mem_memory_write_enable),
         .function_3(ex_mem_function_3),
-        .data_memory_read_data(data_memory_read_data_raw),
+        .data_memory_read_data(data_memory_read_data_in), // Connected to input port
         .timer_read_data(timer_read_data),
         .data_memory_write_data(data_memory_write_data),
         .data_memory_byte_enable(data_memory_byte_enable),
@@ -517,18 +517,7 @@ module core (
     assign data_memory_write_data_out = data_memory_write_data;
     assign data_memory_byte_enable_out = data_memory_byte_enable;
     assign data_memory_write_enable_out = data_memory_write_enable;
-    assign data_memory_read_data_raw = data_memory_read_data_in;
-
-    /*
-    // DMEM Instance
-    data_memory u_data_memory (
-        .clk(clk),
-        .byte_enable(data_memory_byte_enable),
-        .address(ex_mem_alu_result),
-        .write_data(data_memory_write_data),
-        .read_data(data_memory_read_data_raw)
-    );
-    */
+    // assign data_memory_read_data_raw = data_memory_read_data_in; // This is an input to load_store_unit, not an assignment
 
     // UART Instance
     uart_simulator u_uart_simulator (
