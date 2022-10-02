@@ -3,7 +3,14 @@ module core (
     input wire rst_n,
     input wire [31:0] instruction,   // Instruction from IMEM (IF stage)
     input wire instruction_grant,      // Instruction Grant (Cache Hit/Ready)
-    output wire [31:0] program_counter_address // PC output to IMEM
+    output wire [31:0] program_counter_address, // PC output to IMEM
+
+    // Data Memory Interface
+    output wire [31:0] data_memory_address,
+    output wire [31:0] data_memory_write_data_out,
+    output wire [3:0]  data_memory_byte_enable_out,
+    output wire        data_memory_write_enable_out,
+    input  wire [31:0] data_memory_read_data_in
 );
 
     // =========================================================================
@@ -505,6 +512,14 @@ module core (
         .memory_read_data_final(memory_read_data_final)
     );
 
+    // Data Memory Interface Connections
+    assign data_memory_address = ex_mem_alu_result;
+    assign data_memory_write_data_out = data_memory_write_data;
+    assign data_memory_byte_enable_out = data_memory_byte_enable;
+    assign data_memory_write_enable_out = data_memory_write_enable;
+    assign data_memory_read_data_raw = data_memory_read_data_in;
+
+    /*
     // DMEM Instance
     data_memory u_data_memory (
         .clk(clk),
@@ -513,6 +528,7 @@ module core (
         .write_data(data_memory_write_data),
         .read_data(data_memory_read_data_raw)
     );
+    */
 
     // UART Instance
     uart_simulator u_uart_simulator (

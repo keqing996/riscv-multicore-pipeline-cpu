@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module system_top (
+module chip_top (
     input wire clk,
     input wire rst_n,
     output wire [31:0] pc_out,
@@ -19,12 +19,25 @@ module system_top (
     wire icache_memory_ready;
     wire icache_stall_cpu;
 
+    // Data Memory Signals
+    wire [31:0] dmem_addr;
+    wire [31:0] dmem_wdata;
+    wire [3:0]  dmem_be;
+    wire        dmem_we;
+    wire [31:0] dmem_rdata;
+
     core u_core (
         .clk(clk),
         .rst_n(rst_n),
         .instruction(instruction),
         .instruction_grant(!icache_stall_cpu), // Grant when not stalled
-        .program_counter_address(program_counter_address)
+        .program_counter_address(program_counter_address),
+        // Data Memory Interface
+        .data_memory_address(dmem_addr),
+        .data_memory_write_data_out(dmem_wdata),
+        .data_memory_byte_enable_out(dmem_be),
+        .data_memory_write_enable_out(dmem_we),
+        .data_memory_read_data_in(dmem_rdata)
     );
 
     instruction_cache u_instruction_cache (
@@ -39,10 +52,18 @@ module system_top (
         .instruction_memory_ready(icache_memory_ready)
     );
 
-    // Instantiate IMEM (Backing Store)
-    instruction_memory u_instruction_memory (
-        .address(icache_memory_address),
-        .read_data(icache_memory_read_data)
+    // Instantiate Main Memory (Unified)
+    main_memory u_main_memory (
+        .clk(clk),
+        // Port A: Instruction
+        .address_a(icache_memory_address),
+        .read_data_a(icache_memory_read_data),
+        // Port B: Data
+        .address_b(dmem_addr),
+        .write_data_b(dmem_wdata),
+        .write_enable_b(dmem_we),
+        .byte_enable_b(dmem_be),
+        .read_data_b(dmem_rdata)
     );
 
     reg [2:0] mem_wait_counter;
@@ -108,10 +129,7 @@ module system_top (
     // Memory Initialization
     // We use a parameter or a fixed filename. Cocotb will copy the specific hex file to "program.hex"
     initial begin
-        $readmemh("program.hex", u_instruction_memory.memory);
-        // Load program into DMEM as well (for .rodata and .data)
-        // Accessing dmem inside core
-        $readmemh("program.hex", u_core.u_data_memory.memory);
+        $readmemh("program.hex", u_main_memory.memory);
     end
 
 endmodule

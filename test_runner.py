@@ -20,8 +20,8 @@ BUILD_DIR = os.path.join(ROOT_DIR, "build")
 
 # Common Verilog sources
 VERILOG_SOURCES = glob.glob(os.path.join(RTL_DIR, "**", "*.v"), recursive=True)
-# Add system_top.v
-VERILOG_SOURCES.append(os.path.join(TESTS_DIR, "common", "system_top.v"))
+# Add system_top.v (Now chip_top.v in rtl/system, so it's already included by glob)
+# VERILOG_SOURCES.append(os.path.join(TESTS_DIR, "common", "system_top.v"))
 
 # Compilation Settings
 RISCV_CC = "/opt/homebrew/opt/llvm/bin/clang"
@@ -85,7 +85,7 @@ def run_cocotb_test(test_name, is_software=False):
 
     run(
         verilog_sources=VERILOG_SOURCES,
-        toplevel="system_top",
+        toplevel="chip_top",
         module=test_name, # Name of the python module (test_xxx.py)
         python_search=[test_dir], # Where to find the python module
         sim_build=sim_build,
