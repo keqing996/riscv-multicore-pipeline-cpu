@@ -1,6 +1,12 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
+import os
+import sys
+
+# Add tests directory to path to import infrastructure
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from infrastructure import VERILOG_SOURCES, run_test
 
 # ALU Control Codes (Must match RTL)
 ALU_ADD  = 0b0000
@@ -56,7 +62,7 @@ def model_alu(a, b, op):
         return 0
 
 @cocotb.test()
-async def test_alu_basic(dut):
+async def alu_basic_test(dut):
     """Test basic ALU operations with random values."""
     
     # Operations to test
@@ -96,27 +102,19 @@ async def test_alu_basic(dut):
 
     dut._log.info("ALU Basic Test Passed!")
 
-# Runner Infrastructure (using cocotb-test)
-import os
-from cocotb_test.simulator import run
+# Pytest Runner
 import pytest
 
-# This block allows running this file directly with pytest
-if __name__ == "__main__":
-    # Define paths
+def test_alu():
+    """Pytest wrapper for ALU test."""
     tests_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(os.path.dirname(tests_dir))
-    rtl_dir = os.path.join(repo_root, "rtl", "core")
     
-    verilog_sources = [
-        os.path.join(rtl_dir, "alu.v")
-    ]
-    
-    run(
-        verilog_sources=verilog_sources,
+    run_test(
+        test_name="test_alu",
         toplevel="alu",
-        module="test_alu", # This file name
+        module_name="test_alu", # This file name
         python_search=[tests_dir],
-        sim_build=os.path.join(tests_dir, "sim_build_alu"),
-        timescale="1ns/1ps"
+        # We can override verilog_sources if we only want specific files
+        # verilog_sources=[os.path.join(RTL_DIR, "core", "alu.v")] 
     )
+
