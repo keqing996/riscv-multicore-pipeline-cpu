@@ -41,5 +41,6 @@ def test_instruction_decoder():
     run_test_simple(
         module_name="test_instruction_decoder",
         toplevel="instruction_decoder",
-        rtl_files=["core/instruction_decoder.v"]
+        rtl_files=["core/instruction_decoder.v"],
+        file_path=__file__
     )

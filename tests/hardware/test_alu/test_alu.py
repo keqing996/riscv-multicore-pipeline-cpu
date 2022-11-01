@@ -106,6 +106,7 @@ def test_alu():
     run_test_simple(
         module_name="test_alu",
         toplevel="alu",
-        rtl_files=["core/alu.v"]
+        rtl_files=["core/alu.v"],
+        file_path=__file__
     )
 

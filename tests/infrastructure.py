@@ -54,17 +54,12 @@ def run_test(test_name, toplevel, module_name, verilog_sources=None, python_sear
         **kwargs
     )
 
-def run_test_simple(module_name, toplevel, rtl_files):
+def run_test_simple(module_name, toplevel, rtl_files, file_path):
     """
     Simplified wrapper for running hardware tests.
-    Auto-detects the caller's directory and resolves RTL paths relative to RTL_DIR.
+    Resolves RTL paths relative to RTL_DIR.
     """
-    import inspect
-    
-    # Get caller's directory
-    caller_frame = inspect.stack()[1]
-    caller_file = caller_frame.filename
-    tests_dir = os.path.dirname(os.path.abspath(caller_file))
+    tests_dir = os.path.dirname(os.path.abspath(file_path))
     
     # Resolve RTL files
     abs_rtl_files = [os.path.join(RTL_DIR, f) for f in rtl_files]

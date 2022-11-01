@@ -42,5 +42,6 @@ def test_program_counter():
     run_test_simple(
         module_name="test_program_counter",
         toplevel="program_counter",
-        rtl_files=["core/program_counter.v"]
+        rtl_files=["core/program_counter.v"],
+        file_path=__file__
     )
