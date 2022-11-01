@@ -1,12 +1,12 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
-import os
 import sys
+import os
 
-# Add tests directory to path to import infrastructure
+# Import infrastructure
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from infrastructure import VERILOG_SOURCES, run_test
+from infrastructure import run_test_simple
 
 # ALU Control Codes (Must match RTL)
 ALU_ADD  = 0b0000
@@ -102,19 +102,10 @@ async def alu_basic_test(dut):
 
     dut._log.info("ALU Basic Test Passed!")
 
-# Pytest Runner
-import pytest
-
 def test_alu():
-    """Pytest wrapper for ALU test."""
-    tests_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    run_test(
-        test_name="test_alu",
+    run_test_simple(
+        module_name="test_alu",
         toplevel="alu",
-        module_name="test_alu", # This file name
-        python_search=[tests_dir],
-        # We can override verilog_sources if we only want specific files
-        # verilog_sources=[os.path.join(RTL_DIR, "core", "alu.v")] 
+        rtl_files=["core/alu.v"]
     )
 

@@ -54,6 +54,29 @@ def run_test(test_name, toplevel, module_name, verilog_sources=None, python_sear
         **kwargs
     )
 
+def run_test_simple(module_name, toplevel, rtl_files):
+    """
+    Simplified wrapper for running hardware tests.
+    Auto-detects the caller's directory and resolves RTL paths relative to RTL_DIR.
+    """
+    import inspect
+    
+    # Get caller's directory
+    caller_frame = inspect.stack()[1]
+    caller_file = caller_frame.filename
+    tests_dir = os.path.dirname(os.path.abspath(caller_file))
+    
+    # Resolve RTL files
+    abs_rtl_files = [os.path.join(RTL_DIR, f) for f in rtl_files]
+    
+    run_test(
+        test_name=module_name,
+        toplevel=toplevel,
+        module_name=module_name,
+        python_search=[tests_dir],
+        verilog_sources=abs_rtl_files
+    )
+
 def compile_software_test(test_name, test_dir, output_dir):
     """Compiles C code to Hex."""
     print(f"Compiling {test_name}...")

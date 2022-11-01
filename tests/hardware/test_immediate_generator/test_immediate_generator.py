@@ -1,16 +1,12 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
-import os
 import sys
+import os
 
-# Add tests directory to path to import infrastructure
+# Import infrastructure
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from infrastructure import VERILOG_SOURCES, run_test
-
-def sign_extend(value, bits):
-    sign_bit = 1 << (bits - 1)
-    return (value & (sign_bit - 1)) - (value & sign_bit)
+from infrastructure import run_test_simple
 
 @cocotb.test()
 async def immediate_generator_test(dut):
@@ -18,18 +14,10 @@ async def immediate_generator_test(dut):
 
     # Opcodes
     OP_I_ARITH = 0b0010011
-    OP_I_LOAD  = 0b0000011
-    OP_I_JALR  = 0b1100111
     OP_S_STORE = 0b0100011
     OP_B_BRANCH= 0b1100011
     OP_U_LUI   = 0b0110111
-    OP_U_AUIPC = 0b0010111
     OP_J_JAL   = 0b1101111
-
-    # Helper to build instruction
-    def build_instr(opcode, rd=0, funct3=0, rs1=0, rs2=0, funct7=0, imm=0):
-        # This is a generic builder, but we construct specific fields based on type manually below
-        pass
 
     for _ in range(50):
         # --- I-Type Test ---
@@ -129,19 +117,9 @@ async def immediate_generator_test(dut):
 
     dut._log.info("Immediate Generator Test Passed!")
 
-# Pytest Runner
-import pytest
-
 def test_immediate_generator():
-    """Pytest wrapper for Immediate Generator test."""
-    tests_dir = os.path.dirname(os.path.abspath(__file__))
-    # Get RTL directory from infrastructure import or relative path
-    rtl_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(tests_dir))), "rtl")
-    
-    run_test(
-        test_name="test_immediate_generator",
-        toplevel="immediate_generator",
+    run_test_simple(
         module_name="test_immediate_generator",
-        python_search=[tests_dir],
-        verilog_sources=[os.path.join(rtl_dir, "core", "immediate_generator.v")]
+        toplevel="immediate_generator",
+        rtl_files=["core/immediate_generator.v"]
     )
