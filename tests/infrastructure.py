@@ -39,6 +39,11 @@ def run_test(test_name, toplevel, module_name, verilog_sources=None, python_sear
     # Centralized build directory: build/<test_name>
     sim_build = os.path.join(BUILD_DIR, test_name)
     
+    # Ensure PYTHONDONTWRITEBYTECODE is passed to the simulator process
+    extra_env = kwargs.get("extra_env", {})
+    extra_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    kwargs["extra_env"] = extra_env
+
     cocotb_run(
         verilog_sources=verilog_sources,
         toplevel=toplevel,

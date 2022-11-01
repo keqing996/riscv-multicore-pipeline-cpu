@@ -1,5 +1,10 @@
 import sys
 import os
+
+# Prevent __pycache__ generation - Must be done before importing other modules
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import pytest
 
 def main():

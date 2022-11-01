@@ -23,6 +23,7 @@
         "MTVEC",
         "negedge",
         "posedge",
-        "regs"
+        "regs",
+        "verilog"
     ]
 }

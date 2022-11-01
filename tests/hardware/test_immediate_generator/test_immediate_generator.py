@@ -66,13 +66,11 @@ async def immediate_generator_test(dut):
 
         # --- B-Type Test ---
         # imm[12|10:5] -> inst[31:25], imm[4:1|11] -> inst[11:7]
-        # Re-mapping:
-        # inst[31] = imm[12]
-        # inst[30:25] = imm[10:5]
-        # inst[11:8] = imm[4:1]
-        # inst[7] = imm[11]
-        imm_val = random.randint(-4096, 4094) & 0xFFFFFFFE # Even number
-        imm_bits = imm_val & 0x1FFF
+        val = random.randint(-4096, 4094)
+        if val % 2 != 0: val -= 1 # Make even
+        expected = val
+        
+        imm_bits = expected & 0x1FFF
         
         bit_12 = (imm_bits >> 12) & 1
         bit_11 = (imm_bits >> 11) & 1
@@ -84,7 +82,6 @@ async def immediate_generator_test(dut):
         dut.instruction.value = inst
         await Timer(1, units="ns")
         
-        expected = imm_val
         got = int(dut.immediate.value)
         if got >= 0x80000000: got -= 0x100000000
         
@@ -92,16 +89,16 @@ async def immediate_generator_test(dut):
 
         # --- U-Type Test ---
         # imm[31:12] -> inst[31:12]
-        imm_val = random.randint(0, 0xFFFFF) << 12 # Upper 20 bits
-        if imm_val >= 0x80000000: imm_val -= 0x100000000 # Signed representation
+        val = random.randint(-524288, 524287) 
+        u_imm = random.randint(0, 0xFFFFF)
+        expected = (u_imm << 12)
+        if expected >= 0x80000000: expected -= 0x100000000 # Signed 32-bit
         
-        imm_bits = (imm_val >> 12) & 0xFFFFF
-        inst = (imm_bits << 12) | (random.randint(0, 31) << 7) | OP_U_LUI
+        inst = (u_imm << 12) | (random.randint(0, 31) << 7) | OP_U_LUI
         
         dut.instruction.value = inst
         await Timer(1, units="ns")
         
-        expected = imm_val
         got = int(dut.immediate.value)
         if got >= 0x80000000: got -= 0x100000000
         
@@ -109,12 +106,11 @@ async def immediate_generator_test(dut):
 
         # --- J-Type Test ---
         # imm[20|10:1|11|19:12]
-        # inst[31] = imm[20]
-        # inst[30:21] = imm[10:1]
-        # inst[20] = imm[11]
-        # inst[19:12] = imm[19:12]
-        imm_val = random.randint(-1048576, 1048574) & 0xFFFFFFFE
-        imm_bits = imm_val & 0x1FFFFF
+        val = random.randint(-1048576, 1048574)
+        if val % 2 != 0: val -= 1
+        expected = val
+        
+        imm_bits = expected & 0x1FFFFF
         
         bit_20 = (imm_bits >> 20) & 1
         bits_19_12 = (imm_bits >> 12) & 0xFF
@@ -126,7 +122,6 @@ async def immediate_generator_test(dut):
         dut.instruction.value = inst
         await Timer(1, units="ns")
         
-        expected = imm_val
         got = int(dut.immediate.value)
         if got >= 0x80000000: got -= 0x100000000
         
