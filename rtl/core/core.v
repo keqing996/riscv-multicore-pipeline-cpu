@@ -320,7 +320,7 @@ module core (
             id_ex_is_environment_call <= 0;
             id_ex_is_jalr <= 0;
             id_ex_csr_read_data <= 0;
-        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline || stall_fetch_stage) begin
+        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline) begin
             // Flush ID/EX (Insert Bubble)
             id_ex_branch <= 0;
             id_ex_jump <= 0;
@@ -338,6 +338,9 @@ module core (
             id_ex_program_counter <= 0; 
             
             // Others don't matter if reg_write/mem_write are 0
+        end else if (stall_fetch_stage) begin
+            // Stall ID/EX (Hold value)
+            // Do nothing, registers keep their values
         end else begin
             id_ex_program_counter <= if_id_program_counter;
             id_ex_prediction_taken <= if_id_prediction_taken;

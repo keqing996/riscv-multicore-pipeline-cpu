@@ -18,10 +18,9 @@ module main_memory (
     // 64KB Memory (16384 words)
     reg [31:0] memory [0:16383];
 
-    // Port A: Read Only (Instruction)
-    always @(posedge clk) begin
-        // Word aligned access
-        read_data_a <= memory[address_a[15:2]];
+    // Port A: Read Only (Instruction) - Asynchronous Read
+    always @(*) begin
+        read_data_a = memory[address_a[15:2]];
     end
 
     // Port B: Read/Write (Data)
@@ -32,7 +31,11 @@ module main_memory (
             if (byte_enable_b[2]) memory[address_b[15:2]][23:16] <= write_data_b[23:16];
             if (byte_enable_b[3]) memory[address_b[15:2]][31:24] <= write_data_b[31:24];
         end
-        read_data_b <= memory[address_b[15:2]];
+    end
+
+    // Port B Read - Asynchronous Read
+    always @(*) begin
+        read_data_b = memory[address_b[15:2]];
     end
 
 endmodule

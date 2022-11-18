@@ -27,6 +27,7 @@ module regfile (
     always @(posedge clk) begin
         if (write_enable && (rd_index != 5'b00000)) begin
             registers[rd_index] <= write_data;
+            $display("REGFILE WRITE: x%0d = %0d (0x%h)", rd_index, write_data, write_data);
         end
     end
 
