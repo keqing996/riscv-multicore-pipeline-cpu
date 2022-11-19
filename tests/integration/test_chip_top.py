@@ -51,42 +51,15 @@ async def test_chip_top_simple_program(dut):
     for i in range(500):
         await RisingEdge(dut.clk)
         
-        # Debug: Trace Execution
         try:
-            pc_curr = dut.u_core.program_counter_current.value.integer
             pc_ex = dut.u_core.id_ex_program_counter.value.integer
-            alu_res = dut.u_core.alu_result_execute.value.integer
-            # Handle scalar signals which might be Logic objects
-            reg_we_val = dut.u_core.id_ex_register_write_enable.value
-            reg_we = int(reg_we_val) if hasattr(reg_we_val, 'integer') else int(reg_we_val)
-            
-            rd = dut.u_core.id_ex_rd_index.value.integer
-            
-            dut._log.info(f"Cycle {i}: PC_Curr={pc_curr}, PC_EX={pc_ex}, ALU_Res={alu_res}, RD={rd}, WE={reg_we}")
-            
-            if pc_ex == 8: # ADD instruction
-                dut._log.info(f"EXECUTE ADD: PC={pc_ex}, ALU_Res={alu_res}, RD={rd}, WE={reg_we}")
-                # Check inputs
-                op_a = dut.u_core.alu_input_a_execute.value.integer
-                op_b = dut.u_core.alu_input_b_execute.value.integer
-                dut._log.info(f"  OpA={op_a}, OpB={op_b}")
-
-            # Check Memory Interface
-            mem_we = dut.dmem_we.value
-            if mem_we == 1:
-                mem_addr = dut.dmem_addr.value.integer
-                mem_wdata = dut.dmem_wdata.value.integer
-                mem_be = dut.dmem_be.value.integer
-                dut._log.info(f"MEM WRITE: Addr={mem_addr:x}, Data={mem_wdata}, BE={mem_be:b}")
-                
-        except Exception as e:
-            # dut._log.warning(f"Debug trace failed: {e}")
-            pass
+        except:
+            pc_ex = 0
 
         if pc_ex == 24: # EBREAK instruction address (0x18)
             dut._log.info("EBREAK Executed. Stopping.")
             # Wait for pipeline to flush and writeback
-            for _ in range(10):
+            for _ in range(100):
                 await RisingEdge(dut.clk)
             
             # Check Memory Content directly
@@ -100,20 +73,11 @@ async def test_chip_top_simple_program(dut):
             
     # Verify State
     try:
-        # Use to_unsigned() or integer (deprecated but works for now)
-        # Note: accessing array elements in cocotb can be tricky if not exposed correctly
-        # But usually works for Icarus.
         x1 = dut.u_core.u_regfile.registers[1].value.integer
         x2 = dut.u_core.u_regfile.registers[2].value.integer
         x3 = dut.u_core.u_regfile.registers[3].value.integer
         x4 = dut.u_core.u_regfile.registers[4].value.integer
         x5 = dut.u_core.u_regfile.registers[5].value.integer
-        
-        dut._log.info(f"x1 = {x1}")
-        dut._log.info(f"x2 = {x2}")
-        dut._log.info(f"x3 = {x3}")
-        dut._log.info(f"x4 = {x4}")
-        dut._log.info(f"x5 = {x5}")
         
         assert x1 == 10, f"x1 should be 10, got {x1}"
         assert x2 == 20, f"x2 should be 20, got {x2}"
@@ -127,10 +91,10 @@ async def test_chip_top_simple_program(dut):
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from infrastructure import run_test_simple
 
-if __name__ == "__main__":
+def test_chip_top():
     run_test_simple(
         module_name="test_chip_top",
         toplevel="chip_top",
