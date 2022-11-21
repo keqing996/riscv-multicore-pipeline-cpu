@@ -2,24 +2,32 @@ import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
 import os
+import sys
 
-# Machine Code for:
+# Machine Code for Arithmetic Operations
 # 0: ADDI x1, x0, 10  (x1 = 10)
-# 4: ADDI x2, x0, 20  (x2 = 20)
-# 8: ADD x3, x1, x2   (x3 = 30)
-# C: LUI x5, 1        (x5 = 0x1000)
-# 10: SW x3, 0(x5)    (Mem[0x1000] = 30)
-# 14: LW x4, 0(x5)    (x4 = 30)
-# 18: EBREAK          (Stop)
+# 4: ADDI x2, x0, 5   (x2 = 5)
+# 8: ADD x3, x1, x2   (x3 = 15)
+# C: SUB x4, x1, x2   (x4 = 5)
+# 10: AND x5, x1, x2  (x5 = 0)
+# 14: OR x6, x1, x2   (x6 = 15)
+# 18: XOR x7, x1, x2  (x7 = 15)
+# 1C: SLL x8, x1, x2  (x8 = 320)
+# 20: SRL x9, x1, x2  (x9 = 0)
+# 24: SLT x10, x2, x1 (x10 = 1)
+# 28: EBREAK          (Stop)
 PROGRAM = [
     "00a00093", # ADDI x1, x0, 10
-    "01400113", # ADDI x2, x0, 20
+    "00500113", # ADDI x2, x0, 5
     "002081b3", # ADD x3, x1, x2
-    "000012b7", # LUI x5, 1
-    "0032a023", # SW x3, 0(x5)
-    "0002a203", # LW x4, 0(x5)
+    "40208233", # SUB x4, x1, x2
+    "0020f2b3", # AND x5, x1, x2
+    "0020e333", # OR x6, x1, x2
+    "002043b3", # XOR x7, x1, x2
+    "00209433", # SLL x8, x1, x2
+    "002054b3", # SRL x9, x1, x2
+    "00112533", # SLT x10, x2, x1
     "00100073", # EBREAK
-    "00000013", # NOP
     "00000013", # NOP
     "00000013", # NOP
 ]
@@ -28,47 +36,33 @@ def create_hex_file(filename="program.hex"):
     with open(filename, "w") as f:
         for instr in PROGRAM:
             f.write(f"{instr}\n")
-        # Fill the rest with NOPs or zeros if needed, but readmemh handles partial
-        
+
 @cocotb.test()
-async def test_chip_top_simple_program(dut):
+async def test_arithmetic_program(dut):
     """
-    Run a simple assembly program on the full chip.
+    Run arithmetic operations test.
     """
-    # Create hex file in the current directory (where simulation runs)
     create_hex_file("program.hex")
 
-    # Clock Generation
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
-    # Reset
     dut.rst_n.value = 0
     await Timer(20, units="ns")
     dut.rst_n.value = 1
     
     # Wait for execution
-    for i in range(500):
+    for i in range(1000):
         await RisingEdge(dut.clk)
-        
         try:
             pc_ex = dut.u_core.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
-        if pc_ex == 24: # EBREAK instruction address (0x18)
+        if pc_ex == 40: # EBREAK address (0x28)
             dut._log.info("EBREAK Executed. Stopping.")
-            # Wait for pipeline to flush and writeback
             for _ in range(100):
                 await RisingEdge(dut.clk)
-            
-            # Check Memory Content directly
-            try:
-                mem_val = dut.u_main_memory.memory[1024].value.integer
-                dut._log.info(f"Memory[0x1000] = {mem_val}")
-            except Exception as e:
-                dut._log.warning(f"Failed to read memory: {e}")
-                
             break
             
     # Verify State
@@ -78,25 +72,33 @@ async def test_chip_top_simple_program(dut):
         x3 = dut.u_core.u_regfile.registers[3].value.integer
         x4 = dut.u_core.u_regfile.registers[4].value.integer
         x5 = dut.u_core.u_regfile.registers[5].value.integer
+        x6 = dut.u_core.u_regfile.registers[6].value.integer
+        x7 = dut.u_core.u_regfile.registers[7].value.integer
+        x8 = dut.u_core.u_regfile.registers[8].value.integer
+        x9 = dut.u_core.u_regfile.registers[9].value.integer
+        x10 = dut.u_core.u_regfile.registers[10].value.integer
         
         assert x1 == 10, f"x1 should be 10, got {x1}"
-        assert x2 == 20, f"x2 should be 20, got {x2}"
-        assert x3 == 30, f"x3 should be 30, got {x3}"
-        assert x5 == 0x1000, f"x5 should be 0x1000, got {x5}"
-        assert x4 == 30, f"x4 should be 30, got {x4}"
+        assert x2 == 5, f"x2 should be 5, got {x2}"
+        assert x3 == 15, f"x3 should be 15, got {x3}"
+        assert x4 == 5, f"x4 should be 5, got {x4}"
+        assert x5 == 0, f"x5 should be 0, got {x5}"
+        assert x6 == 15, f"x6 should be 15, got {x6}"
+        assert x7 == 15, f"x7 should be 15, got {x7}"
+        assert x8 == 320, f"x8 should be 320, got {x8}"
+        assert x9 == 0, f"x9 should be 0, got {x9}"
+        assert x10 == 1, f"x10 should be 1, got {x10}"
         
     except Exception as e:
         dut._log.error(f"Failed to inspect registers: {e}")
         raise e
 
-import sys
-import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from infrastructure import run_test_simple
 
-def test_chip_top():
+def test_arithmetic():
     run_test_simple(
-        module_name="test_chip_top",
+        module_name="test_arithmetic",
         toplevel="chip_top",
         rtl_files=[
             "system/chip_top.v",
