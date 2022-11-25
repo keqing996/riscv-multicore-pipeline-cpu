@@ -4,29 +4,19 @@ from cocotb.clock import Clock
 import os
 import sys
 
-# Machine Code for Arithmetic Operations
-# 0: ADDI x1, x0, 10  (x1 = 10)
-# 4: ADDI x2, x0, 5   (x2 = 5)
-# 8: ADD x3, x1, x2   (x3 = 15)
-# C: SUB x4, x1, x2   (x4 = 5)
-# 10: AND x5, x1, x2  (x5 = 0)
-# 14: OR x6, x1, x2   (x6 = 15)
-# 18: XOR x7, x1, x2  (x7 = 15)
-# 1C: SLL x8, x1, x2  (x8 = 320)
-# 20: SRL x9, x1, x2  (x9 = 0)
-# 24: SLT x10, x2, x1 (x10 = 1)
-# 28: EBREAK          (Stop)
+# Machine Code for CSR and Trap Tests
+# 0: ADDI x1, x0, 16    (x1 = 16)
+# 4: CSRRW x2, mtvec, x1 (mtvec = 16)
+# 8: CSRRS x3, mtvec, x0 (x3 = 16)
+# C: ECALL              (Trap to 16)
+# 10: ADDI x4, x0, 1    (x4 = 1) (Handler)
+# 14: EBREAK            (Stop)
 PROGRAM = [
-    "00a00093", # ADDI x1, x0, 10
-    "00500113", # ADDI x2, x0, 5
-    "002081b3", # ADD x3, x1, x2
-    "40208233", # SUB x4, x1, x2
-    "0020f2b3", # AND x5, x1, x2
-    "0020e333", # OR x6, x1, x2
-    "0020c3b3", # XOR x7, x1, x2
-    "00209433", # SLL x8, x1, x2
-    "002054b3", # SRL x9, x1, x2
-    "00112533", # SLT x10, x2, x1
+    "01000093", # ADDI x1, x0, 16
+    "30509173", # CSRRW x2, mtvec, x1
+    "305021f3", # CSRRS x3, mtvec, x0
+    "00000073", # ECALL
+    "00100213", # ADDI x4, x0, 1
     "00100073", # EBREAK
     "00000013", # NOP
     "00000013", # NOP
@@ -38,9 +28,9 @@ def create_hex_file(filename="program.hex"):
             f.write(f"{instr}\n")
 
 @cocotb.test()
-async def test_arithmetic_program(dut):
+async def test_csr_traps_program(dut):
     """
-    Run arithmetic operations test.
+    Run CSR and Trap test.
     """
     create_hex_file("program.hex")
 
@@ -59,7 +49,7 @@ async def test_arithmetic_program(dut):
         except:
             pc_ex = 0
 
-        if pc_ex == 40: # EBREAK address (0x28)
+        if pc_ex == 20: # EBREAK address (0x14)
             dut._log.info("EBREAK Executed. Stopping.")
             for _ in range(100):
                 await RisingEdge(dut.clk)
@@ -67,27 +57,25 @@ async def test_arithmetic_program(dut):
             
     # Verify State
     try:
-        x1 = dut.u_core.u_regfile.registers[1].value.integer
-        x2 = dut.u_core.u_regfile.registers[2].value.integer
         x3 = dut.u_core.u_regfile.registers[3].value.integer
         x4 = dut.u_core.u_regfile.registers[4].value.integer
-        x5 = dut.u_core.u_regfile.registers[5].value.integer
-        x6 = dut.u_core.u_regfile.registers[6].value.integer
-        x7 = dut.u_core.u_regfile.registers[7].value.integer
-        x8 = dut.u_core.u_regfile.registers[8].value.integer
-        x9 = dut.u_core.u_regfile.registers[9].value.integer
-        x10 = dut.u_core.u_regfile.registers[10].value.integer
         
-        assert x1 == 10, f"x1 should be 10, got {x1}"
-        assert x2 == 5, f"x2 should be 5, got {x2}"
-        assert x3 == 15, f"x3 should be 15, got {x3}"
-        assert x4 == 5, f"x4 should be 5, got {x4}"
-        assert x5 == 0, f"x5 should be 0, got {x5}"
-        assert x6 == 15, f"x6 should be 15, got {x6}"
-        assert x7 == 15, f"x7 should be 15, got {x7}"
-        assert x8 == 320, f"x8 should be 320, got {x8}"
-        assert x9 == 0, f"x9 should be 0, got {x9}"
-        assert x10 == 1, f"x10 should be 1, got {x10}"
+        # Check CSRs (Need to access internal signals or via CSR instructions)
+        # We can check x3 which read mtvec
+        assert x3 == 16, f"x3 (mtvec) should be 16, got {x3}"
+        
+        # Check if handler executed
+        assert x4 == 1, f"x4 should be 1 (Handler executed), got {x4}"
+        
+        # Check mcause and mepc in CSR file
+        # Note: Accessing internal signals might be tricky depending on hierarchy
+        # dut.u_core.u_control_status_register_file.mcause
+        # dut.u_core.u_control_status_register_file.mepc
+        
+        # mcause for ECALL is 11
+        # mepc should be 0xC (Address of ECALL)
+        
+        # We can try to read them if they are exposed or just rely on the fact that we jumped correctly
         
     except Exception as e:
         dut._log.error(f"Failed to inspect registers: {e}")
@@ -96,9 +84,9 @@ async def test_arithmetic_program(dut):
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from infrastructure import run_test_simple
 
-def test_arithmetic():
+def test_csr_traps():
     run_test_simple(
-        module_name="test_arithmetic",
+        module_name="test_csr_traps",
         toplevel="chip_top",
         rtl_files=[
             "system/chip_top.v",

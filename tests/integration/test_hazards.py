@@ -4,29 +4,27 @@ from cocotb.clock import Clock
 import os
 import sys
 
-# Machine Code for Arithmetic Operations
-# 0: ADDI x1, x0, 10  (x1 = 10)
-# 4: ADDI x2, x0, 5   (x2 = 5)
-# 8: ADD x3, x1, x2   (x3 = 15)
-# C: SUB x4, x1, x2   (x4 = 5)
-# 10: AND x5, x1, x2  (x5 = 0)
-# 14: OR x6, x1, x2   (x6 = 15)
-# 18: XOR x7, x1, x2  (x7 = 15)
-# 1C: SLL x8, x1, x2  (x8 = 320)
-# 20: SRL x9, x1, x2  (x9 = 0)
-# 24: SLT x10, x2, x1 (x10 = 1)
-# 28: EBREAK          (Stop)
+# Machine Code for Hazard Tests
+# 0: ADDI x1, x0, 10
+# 4: ADDI x2, x0, 20
+# 8: ADD x3, x1, x2     (x3 = 30)
+# C: ADD x4, x3, x1     (x4 = 40) (RAW Hazard on x3)
+# 10: ADD x5, x3, x4    (x5 = 70) (RAW Hazard on x3 and x4)
+# 14: LUI x6, 1         (x6 = 0x1000)
+# 18: SW x5, 0(x6)      (Mem[0x1000] = 70)
+# 1C: LW x7, 0(x6)      (x7 = 70)
+# 20: ADD x8, x7, x1    (x8 = 80) (Load-Use Hazard on x7)
+# 24: EBREAK
 PROGRAM = [
     "00a00093", # ADDI x1, x0, 10
-    "00500113", # ADDI x2, x0, 5
+    "01400113", # ADDI x2, x0, 20
     "002081b3", # ADD x3, x1, x2
-    "40208233", # SUB x4, x1, x2
-    "0020f2b3", # AND x5, x1, x2
-    "0020e333", # OR x6, x1, x2
-    "0020c3b3", # XOR x7, x1, x2
-    "00209433", # SLL x8, x1, x2
-    "002054b3", # SRL x9, x1, x2
-    "00112533", # SLT x10, x2, x1
+    "00118233", # ADD x4, x3, x1
+    "004182b3", # ADD x5, x3, x4
+    "00001337", # LUI x6, 1
+    "00532023", # SW x5, 0(x6)
+    "00032383", # LW x7, 0(x6)
+    "00138433", # ADD x8, x7, x1
     "00100073", # EBREAK
     "00000013", # NOP
     "00000013", # NOP
@@ -38,9 +36,9 @@ def create_hex_file(filename="program.hex"):
             f.write(f"{instr}\n")
 
 @cocotb.test()
-async def test_arithmetic_program(dut):
+async def test_hazards_program(dut):
     """
-    Run arithmetic operations test.
+    Run hazard handling test.
     """
     create_hex_file("program.hex")
 
@@ -59,7 +57,7 @@ async def test_arithmetic_program(dut):
         except:
             pc_ex = 0
 
-        if pc_ex == 40: # EBREAK address (0x28)
+        if pc_ex == 36: # EBREAK address (0x24)
             dut._log.info("EBREAK Executed. Stopping.")
             for _ in range(100):
                 await RisingEdge(dut.clk)
@@ -67,27 +65,17 @@ async def test_arithmetic_program(dut):
             
     # Verify State
     try:
-        x1 = dut.u_core.u_regfile.registers[1].value.integer
-        x2 = dut.u_core.u_regfile.registers[2].value.integer
         x3 = dut.u_core.u_regfile.registers[3].value.integer
         x4 = dut.u_core.u_regfile.registers[4].value.integer
         x5 = dut.u_core.u_regfile.registers[5].value.integer
-        x6 = dut.u_core.u_regfile.registers[6].value.integer
         x7 = dut.u_core.u_regfile.registers[7].value.integer
         x8 = dut.u_core.u_regfile.registers[8].value.integer
-        x9 = dut.u_core.u_regfile.registers[9].value.integer
-        x10 = dut.u_core.u_regfile.registers[10].value.integer
         
-        assert x1 == 10, f"x1 should be 10, got {x1}"
-        assert x2 == 5, f"x2 should be 5, got {x2}"
-        assert x3 == 15, f"x3 should be 15, got {x3}"
-        assert x4 == 5, f"x4 should be 5, got {x4}"
-        assert x5 == 0, f"x5 should be 0, got {x5}"
-        assert x6 == 15, f"x6 should be 15, got {x6}"
-        assert x7 == 15, f"x7 should be 15, got {x7}"
-        assert x8 == 320, f"x8 should be 320, got {x8}"
-        assert x9 == 0, f"x9 should be 0, got {x9}"
-        assert x10 == 1, f"x10 should be 1, got {x10}"
+        assert x3 == 30, f"x3 should be 30, got {x3}"
+        assert x4 == 40, f"x4 should be 40, got {x4}"
+        assert x5 == 70, f"x5 should be 70, got {x5}"
+        assert x7 == 70, f"x7 should be 70, got {x7}"
+        assert x8 == 80, f"x8 should be 80, got {x8}"
         
     except Exception as e:
         dut._log.error(f"Failed to inspect registers: {e}")
@@ -96,9 +84,9 @@ async def test_arithmetic_program(dut):
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from infrastructure import run_test_simple
 
-def test_arithmetic():
+def test_hazards():
     run_test_simple(
-        module_name="test_arithmetic",
+        module_name="test_hazards",
         toplevel="chip_top",
         rtl_files=[
             "system/chip_top.v",

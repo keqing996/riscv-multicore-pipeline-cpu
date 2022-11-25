@@ -8,8 +8,8 @@ module immediate_generator (
     always @(*) begin
         case (opcode)
             // I-type: [31:20] -> imm[11:0]
-            // ADDI, LW, JALR, etc.
-            7'b0010011, 7'b0000011, 7'b1100111: 
+            // ADDI, LW, JALR, SYSTEM (CSR)
+            7'b0010011, 7'b0000011, 7'b1100111, 7'b1110011: 
                 immediate = {{20{instruction[31]}}, instruction[31:20]};
 
             // S-type: [31:25] + [11:7] -> imm[11:0]

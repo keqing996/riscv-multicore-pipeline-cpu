@@ -6,6 +6,7 @@ module control_status_register_file (
     input wire [11:0] csr_address,
     input wire csr_write_enable,
     input wire [31:0] csr_write_data,
+    input wire [2:0] csr_op, // Added: CSR Operation (funct3)
     output reg [31:0] csr_read_data,
 
     // Exception/Interrupt signals
@@ -66,6 +67,17 @@ module control_status_register_file (
         endcase
     end
 
+    // CSR Operation Logic
+    reg [31:0] new_csr_value;
+    always @(*) begin
+        case (csr_op[1:0])
+            2'b01: new_csr_value = csr_write_data; // CSRRW
+            2'b10: new_csr_value = csr_read_data | csr_write_data; // CSRRS
+            2'b11: new_csr_value = csr_read_data & ~csr_write_data; // CSRRC
+            default: new_csr_value = csr_write_data;
+        endcase
+    end
+
     // Write Logic
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -104,11 +116,11 @@ module control_status_register_file (
             // Software Write (CSR Instructions)
             else if (csr_write_enable) begin
                 case (csr_address)
-                    CSR_MSTATUS: mstatus <= csr_write_data;
-                    CSR_MIE:     mie     <= csr_write_data;
-                    CSR_MTVEC:   mtvec   <= csr_write_data;
-                    CSR_MEPC:    mepc    <= csr_write_data;
-                    CSR_MCAUSE:  mcause  <= csr_write_data;
+                    CSR_MSTATUS: mstatus <= new_csr_value;
+                    CSR_MIE:     mie     <= new_csr_value;
+                    CSR_MTVEC:   mtvec   <= new_csr_value;
+                    CSR_MEPC:    mepc    <= new_csr_value;
+                    CSR_MCAUSE:  mcause  <= new_csr_value;
                 endcase
             end
         end

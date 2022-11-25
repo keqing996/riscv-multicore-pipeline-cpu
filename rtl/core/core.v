@@ -98,8 +98,7 @@ module core (
     reg id_ex_is_machine_return;
     reg id_ex_is_environment_call;
     reg id_ex_is_jalr; // Added
-    reg [31:0] id_ex_csr_read_data; // Pass read CSR data to EX/MEM/WB? 
-                                // Actually CSR read happens in ID, so we pass data down.
+    // reg [31:0] id_ex_csr_read_data; // Removed: CSR read moved to EX stage
 
     // --- EX Stage Signals ---
     wire [31:0] alu_result_execute;
@@ -259,7 +258,7 @@ module core (
     );
 
     // CSR File
-    wire [31:0] csr_read_data_decode;
+    wire [31:0] csr_read_data_execute; // Changed from decode to execute
     wire [31:0] mtvec;
     wire [31:0] mepc;
     wire interrupt_enable;
@@ -267,14 +266,15 @@ module core (
     control_status_register_file u_control_status_register_file (
         .clk(clk),
         .rst_n(rst_n),
-        .csr_address(immediate_decode[11:0]), // CSR address is in imm field
-        .csr_write_enable(csr_write_enable_decode && !stall_pipeline && !flush_due_to_branch), // Only write if valid
-        .csr_write_data(rs1_data_decode), // Data to write to CSR
-        .csr_read_data(csr_read_data_decode),
-        .exception_enable(is_environment_call_decode && !stall_pipeline && !flush_due_to_branch),
-        .exception_program_counter(if_id_program_counter), // PC of current instruction (for MEPC)
+        .csr_address(id_ex_immediate[11:0]), // Changed to EX stage
+        .csr_write_enable(id_ex_csr_write_enable), // Changed to EX stage
+        .csr_write_data(forward_a_value), // Changed to EX stage (Forwarded RS1)
+        .csr_op(id_ex_function_3), // Added: CSR Operation
+        .csr_read_data(csr_read_data_execute), // Changed to EX stage
+        .exception_enable(id_ex_is_environment_call), // Changed to EX stage
+        .exception_program_counter(id_ex_program_counter), // Changed to EX stage
         .exception_cause(32'd11), // ECALL cause
-        .machine_return_enable(is_machine_return_decode && !stall_pipeline && !flush_due_to_branch),
+        .machine_return_enable(id_ex_is_machine_return), // Changed to EX stage
         .timer_interrupt_request(timer_interrupt_request),
         .mtvec_out(mtvec),
         .mepc_out(mepc),
@@ -319,7 +319,7 @@ module core (
             id_ex_is_machine_return <= 0;
             id_ex_is_environment_call <= 0;
             id_ex_is_jalr <= 0;
-            id_ex_csr_read_data <= 0;
+            // id_ex_csr_read_data <= 0;
         end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline) begin
             // Flush ID/EX (Insert Bubble)
             id_ex_branch <= 0;
@@ -368,7 +368,7 @@ module core (
             id_ex_is_machine_return <= is_machine_return_decode;
             id_ex_is_environment_call <= is_environment_call_decode;
             id_ex_is_jalr <= is_jalr_decode;
-            id_ex_csr_read_data <= csr_read_data_decode;
+            // id_ex_csr_read_data <= csr_read_data_decode;
         end
     end
 
@@ -490,7 +490,7 @@ module core (
             ex_mem_memory_write_enable <= id_ex_memory_write_enable;
             ex_mem_register_write_enable <= id_ex_register_write_enable;
             ex_mem_csr_to_register_select <= id_ex_csr_to_register_select;
-            ex_mem_csr_read_data <= id_ex_csr_read_data;
+            ex_mem_csr_read_data <= csr_read_data_execute; // Changed from id_ex_csr_read_data
         end
     end
 
