@@ -480,7 +480,7 @@ module core (
             ex_mem_register_write_enable <= 0;
             ex_mem_csr_to_register_select <= 0;
             ex_mem_csr_read_data <= 0;
-        end else if (!stall_global) begin
+        end else if (!stall_backend) begin
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value; // Store data (after forwarding)
             ex_mem_rd_index <= id_ex_rd_index;
@@ -552,7 +552,7 @@ module core (
             mem_wb_register_write_enable <= 0;
             mem_wb_csr_to_register_select <= 0;
             mem_wb_csr_read_data <= 0;
-        end else if (!stall_global) begin
+        end else if (!stall_backend) begin
             mem_wb_read_data <= memory_read_data_final;
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_rd_index <= ex_mem_rd_index;
