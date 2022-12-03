@@ -91,7 +91,7 @@ def test_csr_traps():
         rtl_files=[
             "system/chip_top.v",
             "core/core.v",
-            "core/frontend.v",
+            "core/frontend/frontend.v",
             "core/backend.v",
             "core/alu.v",
             "core/alu_control_unit.v",
@@ -104,7 +104,7 @@ def test_csr_traps():
             "core/hazard_detection_unit.v",
             "core/immediate_generator.v",
             "core/load_store_unit.v",
-            "core/program_counter.v",
+            "core/frontend/program_counter.v",
             "core/regfile.v",
             "memory/main_memory.v",
             "cache/instruction_cache.v",
