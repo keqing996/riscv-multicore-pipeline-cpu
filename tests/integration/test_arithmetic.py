@@ -55,7 +55,7 @@ async def test_arithmetic_program(dut):
     for i in range(1000):
         await RisingEdge(dut.clk)
         try:
-            pc_ex = dut.u_core.id_ex_program_counter.value.integer
+            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
@@ -67,16 +67,16 @@ async def test_arithmetic_program(dut):
             
     # Verify State
     try:
-        x1 = dut.u_core.u_regfile.registers[1].value.integer
-        x2 = dut.u_core.u_regfile.registers[2].value.integer
-        x3 = dut.u_core.u_regfile.registers[3].value.integer
-        x4 = dut.u_core.u_regfile.registers[4].value.integer
-        x5 = dut.u_core.u_regfile.registers[5].value.integer
-        x6 = dut.u_core.u_regfile.registers[6].value.integer
-        x7 = dut.u_core.u_regfile.registers[7].value.integer
-        x8 = dut.u_core.u_regfile.registers[8].value.integer
-        x9 = dut.u_core.u_regfile.registers[9].value.integer
-        x10 = dut.u_core.u_regfile.registers[10].value.integer
+        x1 = dut.u_core.u_backend.u_regfile.registers[1].value.integer
+        x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
+        x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
+        x4 = dut.u_core.u_backend.u_regfile.registers[4].value.integer
+        x5 = dut.u_core.u_backend.u_regfile.registers[5].value.integer
+        x6 = dut.u_core.u_backend.u_regfile.registers[6].value.integer
+        x7 = dut.u_core.u_backend.u_regfile.registers[7].value.integer
+        x8 = dut.u_core.u_backend.u_regfile.registers[8].value.integer
+        x9 = dut.u_core.u_backend.u_regfile.registers[9].value.integer
+        x10 = dut.u_core.u_backend.u_regfile.registers[10].value.integer
         
         assert x1 == 10, f"x1 should be 10, got {x1}"
         assert x2 == 5, f"x2 should be 5, got {x2}"
@@ -103,6 +103,8 @@ def test_arithmetic():
         rtl_files=[
             "system/chip_top.v",
             "core/core.v",
+            "core/frontend.v",
+            "core/backend.v",
             "core/alu.v",
             "core/alu_control_unit.v",
             "core/branch_predictor.v",

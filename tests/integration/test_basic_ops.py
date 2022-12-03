@@ -52,7 +52,7 @@ async def test_basic_ops_program(dut):
         await RisingEdge(dut.clk)
         
         try:
-            pc_ex = dut.u_core.id_ex_program_counter.value.integer
+            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
@@ -73,11 +73,11 @@ async def test_basic_ops_program(dut):
             
     # Verify State
     try:
-        x1 = dut.u_core.u_regfile.registers[1].value.integer
-        x2 = dut.u_core.u_regfile.registers[2].value.integer
-        x3 = dut.u_core.u_regfile.registers[3].value.integer
-        x4 = dut.u_core.u_regfile.registers[4].value.integer
-        x5 = dut.u_core.u_regfile.registers[5].value.integer
+        x1 = dut.u_core.u_backend.u_regfile.registers[1].value.integer
+        x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
+        x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
+        x4 = dut.u_core.u_backend.u_regfile.registers[4].value.integer
+        x5 = dut.u_core.u_backend.u_regfile.registers[5].value.integer
         
         assert x1 == 10, f"x1 should be 10, got {x1}"
         assert x2 == 20, f"x2 should be 20, got {x2}"
@@ -101,6 +101,8 @@ def test_basic_ops():
         rtl_files=[
             "system/chip_top.v",
             "core/core.v",
+            "core/frontend.v",
+            "core/backend.v",
             "core/alu.v",
             "core/alu_control_unit.v",
             "core/branch_predictor.v",

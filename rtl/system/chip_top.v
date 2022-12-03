@@ -124,7 +124,7 @@ module chip_top (
     // Expose signals for observation
     assign pc_out = program_counter_address;
     assign instr_out = instruction;
-    assign alu_res_out = u_core.alu_result_execute; // Or whatever signal we want to trace
+    assign alu_res_out = u_core.u_backend.alu_result_execute; // Or whatever signal we want to trace
 
     // Memory Initialization
     // We use a parameter or a fixed filename. Cocotb will copy the specific hex file to "program.hex"

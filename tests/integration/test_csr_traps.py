@@ -45,7 +45,7 @@ async def test_csr_traps_program(dut):
     for i in range(1000):
         await RisingEdge(dut.clk)
         try:
-            pc_ex = dut.u_core.id_ex_program_counter.value.integer
+            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
@@ -57,8 +57,8 @@ async def test_csr_traps_program(dut):
             
     # Verify State
     try:
-        x3 = dut.u_core.u_regfile.registers[3].value.integer
-        x4 = dut.u_core.u_regfile.registers[4].value.integer
+        x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
+        x4 = dut.u_core.u_backend.u_regfile.registers[4].value.integer
         
         # Check CSRs (Need to access internal signals or via CSR instructions)
         # We can check x3 which read mtvec
@@ -91,6 +91,8 @@ def test_csr_traps():
         rtl_files=[
             "system/chip_top.v",
             "core/core.v",
+            "core/frontend.v",
+            "core/backend.v",
             "core/alu.v",
             "core/alu_control_unit.v",
             "core/branch_predictor.v",
