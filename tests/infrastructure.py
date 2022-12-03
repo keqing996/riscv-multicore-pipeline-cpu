@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 import subprocess
+import shutil
 from cocotb_test.simulator import run as cocotb_run
 
 # Root directory
@@ -31,25 +32,56 @@ def run_test(test_name, toplevel, module_name, verilog_sources=None, python_sear
     Wrapper around cocotb_test.simulator.run to enforce consistent build directories.
     """
     if verilog_sources is None:
-        verilog_sources = VERILOG_SOURCES
+        verilog_sources = list(VERILOG_SOURCES)
+    else:
+        verilog_sources = list(verilog_sources)
         
     if python_search is None:
         python_search = []
         
     # Centralized build directory: build/<test_name>
     sim_build = os.path.join(BUILD_DIR, test_name)
+
+    # Clean up sim_build directory if it exists
+    if os.path.exists(sim_build):
+        shutil.rmtree(sim_build)
     
     # Ensure PYTHONDONTWRITEBYTECODE is passed to the simulator process
     extra_env = kwargs.get("extra_env", {})
     extra_env["PYTHONDONTWRITEBYTECODE"] = "1"
     kwargs["extra_env"] = extra_env
 
+    # Manually generate wave dump module to ensure VCD generation
+    os.makedirs(sim_build, exist_ok=True)
+    dump_file = os.path.join(sim_build, f"dump_{test_name}.v")
+    
+    dump_vars_content = f"        $dumpvars(0, {toplevel});"
+
+    with open(dump_file, "w") as f:
+        f.write(f"""
+module dump_waves;
+    initial begin
+        $dumpfile("dump.vcd");
+{dump_vars_content}
+    end
+endmodule
+""")
+    
+    verilog_sources.append(dump_file)
+
+    # Remove waves from kwargs if present to avoid conflict
+    kwargs.pop("waves", None)
+
+    # Add dump_waves to toplevel to ensure it is simulated
+    sim_toplevel = [toplevel, "dump_waves"]
+
     cocotb_run(
         verilog_sources=verilog_sources,
-        toplevel=toplevel,
+        toplevel=sim_toplevel,
         module=module_name,
         python_search=python_search,
         sim_build=sim_build,
+        waves=False,
         timescale="1ns/1ps",
         **kwargs
     )

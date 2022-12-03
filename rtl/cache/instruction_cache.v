@@ -68,7 +68,6 @@ module instruction_cache (
         end else begin
             state <= next_state;
             refill_buffer <= next_refill_buffer;
-            $display("ICache State: %d, Addr: %h, Stall: %b, Hit: %b, MemReady: %b", state, program_counter_address, stall_cpu, hit, instruction_memory_ready);
         end
     end
 
@@ -98,7 +97,6 @@ module instruction_cache (
                     stall_cpu = 0;
                     instruction = hit_data;
                 end else begin
-                    $display("I-Cache Miss at %h", program_counter_address);
                     stall_cpu = 1; // Stall!
                     next_state = STATE_FETCH_0;
                 end
@@ -109,7 +107,6 @@ module instruction_cache (
                 instruction_memory_request = 1;
                 instruction_memory_address = {program_counter_address[31:4], 4'b0000}; // Word 0
                 if (instruction_memory_ready) begin
-                    $display("I-Cache Fetch 0: %h = %h", instruction_memory_address, instruction_memory_read_data);
                     next_refill_buffer[31:0] = instruction_memory_read_data;
                     next_state = STATE_FETCH_1;
                 end
@@ -147,9 +144,6 @@ module instruction_cache (
 
             STATE_UPDATE: begin
                 stall_cpu = 1;
-                // Write to cache
-                // We do this in the sequential block or here?
-                // Ideally we transition to IDLE and write.
                 next_state = STATE_IDLE;
             end
         endcase
