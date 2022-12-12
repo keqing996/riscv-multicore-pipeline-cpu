@@ -120,6 +120,6 @@ def test_branch_predictor():
     run_test_simple(
         module_name="test_branch_predictor",
         toplevel="branch_predictor",
-        rtl_files=["core/branch_predictor.v"],
+        rtl_files=["core/frontend/branch_predictor.v"],
         file_path=__file__
     )

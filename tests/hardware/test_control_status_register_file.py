@@ -138,6 +138,6 @@ def test_control_status_register_file():
     run_test_simple(
         module_name="test_control_status_register_file",
         toplevel="control_status_register_file",
-        rtl_files=["core/control_status_register_file.v"],
+        rtl_files=["core/backend/control_status_register_file.v"],
         file_path=__file__
     )

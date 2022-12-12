@@ -94,6 +94,6 @@ def test_load_store_unit():
     run_test_simple(
         module_name="test_load_store_unit",
         toplevel="load_store_unit",
-        rtl_files=["core/load_store_unit.v"],
+        rtl_files=["core/backend/load_store_unit.v"],
         file_path=__file__
     )

@@ -121,6 +121,6 @@ def test_immediate_generator():
     run_test_simple(
         module_name="test_immediate_generator",
         toplevel="immediate_generator",
-        rtl_files=["core/immediate_generator.v"],
+        rtl_files=["core/backend/immediate_generator.v"],
         file_path=__file__
     )

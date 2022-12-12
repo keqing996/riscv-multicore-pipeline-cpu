@@ -47,6 +47,6 @@ def test_hazard_detection_unit():
     run_test_simple(
         module_name="test_hazard_detection_unit",
         toplevel="hazard_detection_unit",
-        rtl_files=["core/hazard_detection_unit.v"],
+        rtl_files=["core/backend/hazard_detection_unit.v"],
         file_path=__file__
     )

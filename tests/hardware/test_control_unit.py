@@ -108,6 +108,6 @@ def test_control_unit():
     run_test_simple(
         module_name="test_control_unit",
         toplevel="control_unit",
-        rtl_files=["core/control_unit.v"],
+        rtl_files=["core/backend/control_unit.v"],
         file_path=__file__
     )

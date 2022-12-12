@@ -78,6 +78,6 @@ def test_alu_control_unit():
     run_test_simple(
         module_name="test_alu_control_unit",
         toplevel="alu_control_unit",
-        rtl_files=["core/alu_control_unit.v"],
+        rtl_files=["core/backend/alu_control_unit.v"],
         file_path=__file__
     )

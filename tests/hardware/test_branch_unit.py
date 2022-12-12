@@ -56,6 +56,6 @@ def test_branch_unit():
     run_test_simple(
         module_name="test_branch_unit",
         toplevel="branch_unit",
-        rtl_files=["core/branch_unit.v"],
+        rtl_files=["core/backend/branch_unit.v"],
         file_path=__file__
     )

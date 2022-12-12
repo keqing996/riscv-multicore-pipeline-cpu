@@ -59,6 +59,6 @@ def test_forwarding_unit():
     run_test_simple(
         module_name="test_forwarding_unit",
         toplevel="forwarding_unit",
-        rtl_files=["core/forwarding_unit.v"],
+        rtl_files=["core/backend/forwarding_unit.v"],
         file_path=__file__
     )

@@ -83,6 +83,6 @@ def test_regfile():
     run_test_simple(
         module_name="test_regfile",
         toplevel="regfile",
-        rtl_files=["core/regfile.v"],
+        rtl_files=["core/backend/regfile.v"],
         file_path=__file__
     )
