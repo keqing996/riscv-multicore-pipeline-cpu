@@ -266,7 +266,7 @@ module backend (
             id_ex_is_machine_return <= 0;
             id_ex_is_environment_call <= 0;
             is_jalr_execute <= 0;
-        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline) begin
+        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline || stall_fetch_stage) begin
             // Flush ID/EX (Insert Bubble)
             is_branch_execute <= 0;
             is_jump_execute <= 0;
@@ -281,8 +281,6 @@ module backend (
             id_ex_prediction_taken <= 0;
             id_ex_prediction_target <= 0;
             id_ex_program_counter <= 0; 
-        end else if (stall_fetch_stage) begin
-            // Stall ID/EX (Hold value)
         end else begin
             id_ex_program_counter <= if_id_program_counter;
             id_ex_prediction_taken <= if_id_prediction_taken;
@@ -410,7 +408,7 @@ module backend (
             ex_mem_register_write_enable <= 0;
             ex_mem_csr_to_register_select <= 0;
             ex_mem_csr_read_data <= 0;
-        end else if (!stall_fetch_stage) begin // stall_backend = stall_fetch_stage
+        end else begin
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value;
             ex_mem_rd_index <= id_ex_rd_index;
@@ -479,7 +477,7 @@ module backend (
             mem_wb_register_write_enable <= 0;
             mem_wb_csr_to_register_select <= 0;
             mem_wb_csr_read_data <= 0;
-        end else if (!stall_fetch_stage) begin
+        end else begin
             mem_wb_read_data <= memory_read_data_final;
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_rd_index <= ex_mem_rd_index;
