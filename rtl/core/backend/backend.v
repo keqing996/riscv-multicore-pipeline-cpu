@@ -16,7 +16,9 @@ module backend (
     output wire [31:0] data_memory_write_data_out,
     output wire [3:0]  data_memory_byte_enable_out,
     output wire        data_memory_write_enable_out,
+    output wire        data_memory_read_enable_out,
     input  wire [31:0] data_memory_read_data_in,
+    input  wire        data_memory_busy,
 
     // Outputs to Frontend (Control / Feedback)
     output wire stall_pipeline, // To Frontend
@@ -70,7 +72,9 @@ module backend (
 
     // Hazard / Stall Signals
     wire stall_fetch_stage = !instruction_grant;
-    // stall_pipeline is output
+    wire stall_mem_stage = data_memory_busy;
+    wire stall_hazard;
+    assign stall_pipeline = stall_hazard || stall_mem_stage;
 
     // --- ID/EX Pipeline Registers ---
     // id_ex_program_counter is output
@@ -234,11 +238,12 @@ module backend (
         .rs2_index_decode(rs2_index_decode),
         .rd_index_execute(id_ex_rd_index),
         .memory_read_enable_execute(id_ex_memory_read_enable),
-        .stall_pipeline(stall_pipeline)
+        .stall_pipeline(stall_hazard)
     );
 
     // ID/EX Pipeline Register
     always @(posedge clk or negedge rst_n) begin
+        $display("Backend: stall_mem_stage=%b, stall_pipeline=%b", stall_mem_stage, stall_pipeline);
         if (!rst_n) begin
             id_ex_program_counter <= 0;
             id_ex_prediction_taken <= 0;
@@ -266,7 +271,9 @@ module backend (
             id_ex_is_machine_return <= 0;
             id_ex_is_environment_call <= 0;
             is_jalr_execute <= 0;
-        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_pipeline || stall_fetch_stage) begin
+        end else if (stall_mem_stage) begin
+            // Stall ID/EX (Hold value)
+        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_hazard || stall_fetch_stage) begin
             // Flush ID/EX (Insert Bubble)
             is_branch_execute <= 0;
             is_jump_execute <= 0;
@@ -397,6 +404,7 @@ module backend (
 
     // EX/MEM Pipeline Register
     always @(posedge clk or negedge rst_n) begin
+        $display("Backend EX/MEM: stall_mem_stage=%b, current_rd=%d, next_rd=%d", stall_mem_stage, ex_mem_rd_index, id_ex_rd_index);
         if (!rst_n) begin
             ex_mem_alu_result <= 0;
             ex_mem_rs2_data <= 0;
@@ -408,6 +416,8 @@ module backend (
             ex_mem_register_write_enable <= 0;
             ex_mem_csr_to_register_select <= 0;
             ex_mem_csr_read_data <= 0;
+        end else if (stall_mem_stage) begin
+            // Stall EX/MEM (Hold value)
         end else begin
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value;
@@ -447,6 +457,7 @@ module backend (
     assign data_memory_write_data_out = data_memory_write_data;
     assign data_memory_byte_enable_out = data_memory_byte_enable;
     assign data_memory_write_enable_out = data_memory_write_enable;
+    assign data_memory_read_enable_out = ex_mem_memory_read_enable;
 
     // UART Instance
     uart_simulator u_uart_simulator (
@@ -477,6 +488,8 @@ module backend (
             mem_wb_register_write_enable <= 0;
             mem_wb_csr_to_register_select <= 0;
             mem_wb_csr_read_data <= 0;
+        end else if (stall_mem_stage) begin
+            // Stall MEM/WB (Hold value)
         end else begin
             mem_wb_read_data <= memory_read_data_final;
             mem_wb_alu_result <= ex_mem_alu_result;

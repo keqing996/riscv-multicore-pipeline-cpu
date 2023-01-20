@@ -106,6 +106,7 @@ def test_control_flow():
             "core/backend/regfile.v",
             "memory/main_memory.v",
             "cache/instruction_cache.v",
+            "cache/data_cache.v",
             "peripherals/timer.v",
             "peripherals/uart_simulator.v"
         ],

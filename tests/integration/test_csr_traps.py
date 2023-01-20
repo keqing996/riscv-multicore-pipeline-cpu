@@ -108,6 +108,7 @@ def test_csr_traps():
             "core/backend/regfile.v",
             "memory/main_memory.v",
             "cache/instruction_cache.v",
+            "cache/data_cache.v",
             "peripherals/timer.v",
             "peripherals/uart_simulator.v"
         ],

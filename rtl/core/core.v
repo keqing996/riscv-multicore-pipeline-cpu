@@ -10,7 +10,9 @@ module core (
     output wire [31:0] data_memory_write_data_out,
     output wire [3:0]  data_memory_byte_enable_out,
     output wire        data_memory_write_enable_out,
-    input  wire [31:0] data_memory_read_data_in
+    output wire        data_memory_read_enable_out,
+    input  wire [31:0] data_memory_read_data_in,
+    input  wire        data_memory_busy
 );
 
     // =========================================================================
@@ -83,7 +85,9 @@ module core (
         .data_memory_write_data_out(data_memory_write_data_out),
         .data_memory_byte_enable_out(data_memory_byte_enable_out),
         .data_memory_write_enable_out(data_memory_write_enable_out),
+        .data_memory_read_enable_out(data_memory_read_enable_out),
         .data_memory_read_data_in(data_memory_read_data_in),
+        .data_memory_busy(data_memory_busy),
         .stall_pipeline(stall_pipeline),
         .flush_due_to_branch(flush_due_to_branch),
         .flush_due_to_jump(flush_due_to_jump),
