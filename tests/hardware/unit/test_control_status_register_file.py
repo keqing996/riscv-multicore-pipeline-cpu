@@ -5,7 +5,7 @@ import sys
 import os
 
 # Import infrastructure
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from infrastructure import run_test_simple
 
 @cocotb.test()
