@@ -243,7 +243,6 @@ module backend (
 
     // ID/EX Pipeline Register
     always @(posedge clk or negedge rst_n) begin
-        $display("Backend: stall_mem_stage=%b, stall_pipeline=%b", stall_mem_stage, stall_pipeline);
         if (!rst_n) begin
             id_ex_program_counter <= 0;
             id_ex_prediction_taken <= 0;
@@ -404,7 +403,6 @@ module backend (
 
     // EX/MEM Pipeline Register
     always @(posedge clk or negedge rst_n) begin
-        $display("Backend EX/MEM: stall_mem_stage=%b, current_rd=%d, next_rd=%d", stall_mem_stage, ex_mem_rd_index, id_ex_rd_index);
         if (!rst_n) begin
             ex_mem_alu_result <= 0;
             ex_mem_rs2_data <= 0;

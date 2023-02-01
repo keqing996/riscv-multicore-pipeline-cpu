@@ -5,8 +5,8 @@ import sys
 import os
 
 # Add tests directory to path to import infrastructure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from infrastructure import run_test_simple
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from infrastructure import run_test_simple, BACKEND_RTL_FILES
 
 @cocotb.test()
 async def backend_stall_test(dut):
@@ -159,17 +159,21 @@ async def backend_data_stall_test(dut):
     await Timer(1, unit="ns")
     # End of Cycle 4:
     # Everything should be FROZEN.
-    # MEM/WB should NOT have updated (still NOP or previous).
-    # EX/MEM should still hold Instr 1.
-    # ID/EX should still hold Instr 2.
+    # MEM/WB should NOT have updated (still Instr 1).
+    # EX/MEM should still hold Instr 2.
+    # ID/EX should still hold Instr 3.
     
-    # Check EX/MEM (Should be Instr 1: ADDI x1, rd=1)
-    if dut.ex_mem_rd_index.value != 1:
-        raise ValueError(f"EX/MEM should hold Instr 1 (rd=1), got {dut.ex_mem_rd_index.value}")
+    # Check MEM/WB (Should be Instr 1: ADDI x1, rd=1)
+    if dut.mem_wb_rd_index.value != 1:
+        raise ValueError(f"MEM/WB should hold Instr 1 (rd=1), got {dut.mem_wb_rd_index.value}")
+
+    # Check EX/MEM (Should be Instr 2: ADDI x2, rd=2)
+    if dut.ex_mem_rd_index.value != 2:
+        raise ValueError(f"EX/MEM should hold Instr 2 (rd=2), got {dut.ex_mem_rd_index.value}")
         
-    # Check ID/EX (Should be Instr 2: ADDI x2, rd=2)
-    if dut.id_ex_rd_index.value != 2:
-        raise ValueError(f"ID/EX should hold Instr 2 (rd=2), got {dut.id_ex_rd_index.value}")
+    # Check ID/EX (Should be Instr 3: ADDI x3, rd=3)
+    if dut.id_ex_rd_index.value != 3:
+        raise ValueError(f"ID/EX should hold Instr 3 (rd=3), got {dut.id_ex_rd_index.value}")
         
     dut._log.info("Cycle 4 Check Passed: Pipeline Frozen")
     
@@ -179,18 +183,15 @@ async def backend_data_stall_test(dut):
     await Timer(1, unit="ns")
     # End of Cycle 5:
     # Pipeline advances.
-    # MEM/WB: Instr 1
-    # EX/MEM: Instr 2
-    # ID/EX: Instr 3
+    # MEM/WB: Instr 2
+    # EX/MEM: Instr 3
+    # ID/EX: Instr 4 (or bubble/garbage if no new input)
     
-    if dut.mem_wb_rd_index.value != 1:
-        raise ValueError(f"MEM/WB should have Instr 1 (rd=1), got {dut.mem_wb_rd_index.value}")
+    if dut.mem_wb_rd_index.value != 2:
+        raise ValueError(f"MEM/WB should have Instr 2 (rd=2), got {dut.mem_wb_rd_index.value}")
         
-    if dut.ex_mem_rd_index.value != 2:
-        raise ValueError(f"EX/MEM should have Instr 2 (rd=2), got {dut.ex_mem_rd_index.value}")
-        
-    if dut.id_ex_rd_index.value != 3:
-        raise ValueError(f"ID/EX should have Instr 3 (rd=3), got {dut.id_ex_rd_index.value}")
+    if dut.ex_mem_rd_index.value != 3:
+        raise ValueError(f"EX/MEM should have Instr 3 (rd=3), got {dut.ex_mem_rd_index.value}")
 
     dut._log.info("Cycle 5 Check Passed: Pipeline Advanced")
     dut._log.info("backend_data_stall_test Passed")
@@ -199,21 +200,6 @@ def test_backend():
     run_test_simple(
         module_name="test_backend",
         toplevel="backend",
-        rtl_files=[
-            "core/backend/backend.v",
-            "core/backend/alu.v",
-            "core/backend/alu_control_unit.v",
-            "core/backend/branch_unit.v",
-            "core/backend/control_unit.v",
-            "core/backend/control_status_register_file.v",
-            "core/backend/instruction_decoder.v",
-            "core/backend/forwarding_unit.v",
-            "core/backend/hazard_detection_unit.v",
-            "core/backend/immediate_generator.v",
-            "core/backend/load_store_unit.v",
-            "core/backend/regfile.v",
-            "peripherals/timer.v",
-            "peripherals/uart_simulator.v"
-        ],
+        rtl_files=BACKEND_RTL_FILES,
         file_path=__file__
     )

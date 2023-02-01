@@ -91,36 +91,13 @@ async def test_basic_ops_program(dut):
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from infrastructure import run_test_simple
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from infrastructure import run_test_simple, CHIP_TOP_RTL_FILES
 
 def test_basic_ops():
     run_test_simple(
         module_name="test_basic_ops",
         toplevel="chip_top",
-        rtl_files=[
-            "system/chip_top.v",
-            "core/core.v",
-            "core/frontend/frontend.v",
-            "core/backend/backend.v",
-            "core/backend/alu.v",
-            "core/backend/alu_control_unit.v",
-            "core/frontend/branch_predictor.v",
-            "core/backend/branch_unit.v",
-            "core/backend/control_unit.v",
-            "core/backend/control_status_register_file.v",
-            "core/backend/instruction_decoder.v",
-            "core/backend/forwarding_unit.v",
-            "core/backend/hazard_detection_unit.v",
-            "core/backend/immediate_generator.v",
-            "core/backend/load_store_unit.v",
-            "core/frontend/program_counter.v",
-            "core/backend/regfile.v",
-            "memory/main_memory.v",
-            "cache/instruction_cache.v",
-            "cache/data_cache.v",
-            "peripherals/timer.v",
-            "peripherals/uart_simulator.v"
-        ],
+        rtl_files=CHIP_TOP_RTL_FILES,
         file_path=__file__
     )

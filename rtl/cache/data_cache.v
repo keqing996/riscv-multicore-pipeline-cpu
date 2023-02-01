@@ -178,7 +178,6 @@ module data_cache (
                 mem_byte_enable = cpu_byte_enable;
                 
                 if (mem_ready) begin
-                    $display("D-Cache: Write Complete to %h, Data: %h, BE: %b", cpu_address, cpu_write_data, cpu_byte_enable);
                     next_state = STATE_ACCESS_DONE;
                 end
             end
@@ -193,7 +192,6 @@ module data_cache (
     // Cache Update Logic (Synchronous)
     always @(posedge clk) begin
         if (state == STATE_UPDATE) begin
-            $display("D-Cache: Refill Complete. Index: %h, Tag: %h, Data: %h", index, tag, refill_buffer);
             valid[index] <= 1;
             tag_array[index] <= tag;
             data_array[index] <= refill_buffer;
@@ -201,13 +199,6 @@ module data_cache (
             // Write-Through: If it was a hit, we must update the cache too!
             // If it was a miss, we don't allocate (No-Write-Allocate), so we don't touch cache.
             if (hit) begin
-                // We need to update only the specific word/bytes in the block.
-                // This is tricky with a 128-bit wide array.
-                // For simplicity, let's read-modify-write the block_data in place?
-                // Or simpler: Just invalidate the line on write hit.
-                // Invalidating is safe but hurts performance.
-                // Let's try to update.
-                
                 case (word_offset)
                     2'b00: begin
                         if (cpu_byte_enable[0]) data_array[index][7:0]   <= cpu_write_data[7:0];
