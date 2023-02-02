@@ -196,10 +196,13 @@ async def backend_data_stall_test(dut):
     dut._log.info("Cycle 5 Check Passed: Pipeline Advanced")
     dut._log.info("backend_data_stall_test Passed")
 
+from infrastructure import run_test_simple
+from .common import get_rtl_files
+
 def test_backend():
     run_test_simple(
         module_name="test_backend",
         toplevel="backend",
-        rtl_files=BACKEND_RTL_FILES,
+        rtl_files=get_rtl_files("backend"),
         file_path=__file__
     )

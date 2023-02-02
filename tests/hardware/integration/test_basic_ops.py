@@ -2,6 +2,7 @@ import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
 import os
+import sys
 
 # Machine Code for:
 # 0: ADDI x1, x0, 10  (x1 = 10)
@@ -89,15 +90,15 @@ async def test_basic_ops_program(dut):
         dut._log.error(f"Failed to inspect registers: {e}")
         raise e
 
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from infrastructure import run_test_simple, CHIP_TOP_RTL_FILES
+# Add tests directory to path to import infrastructure
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from infrastructure import run_test_simple
+from .common import get_rtl_files
 
 def test_basic_ops():
     run_test_simple(
         module_name="test_basic_ops",
         toplevel="chip_top",
-        rtl_files=CHIP_TOP_RTL_FILES,
+        rtl_files=get_rtl_files("core"),
         file_path=__file__
     )

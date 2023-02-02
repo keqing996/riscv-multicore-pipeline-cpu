@@ -27,48 +27,6 @@ LINKER_SCRIPT = os.path.join(TESTS_DIR, "common", "link.ld")
 RISCV_LDFLAGS = ["-T", LINKER_SCRIPT]
 HEX_GEN_SCRIPT = os.path.join(TOOLS_DIR, "make_hex.py")
 
-CHIP_TOP_RTL_FILES = [
-    "system/chip_top.v",
-    "core/core.v",
-    "core/frontend/frontend.v",
-    "core/backend/backend.v",
-    "core/backend/alu.v",
-    "core/backend/alu_control_unit.v",
-    "core/frontend/branch_predictor.v",
-    "core/backend/branch_unit.v",
-    "core/backend/control_unit.v",
-    "core/backend/control_status_register_file.v",
-    "core/backend/instruction_decoder.v",
-    "core/backend/forwarding_unit.v",
-    "core/backend/hazard_detection_unit.v",
-    "core/backend/immediate_generator.v",
-    "core/backend/load_store_unit.v",
-    "core/frontend/program_counter.v",
-    "core/backend/regfile.v",
-    "memory/main_memory.v",
-    "cache/instruction_cache.v",
-    "cache/data_cache.v",
-    "peripherals/timer.v",
-    "peripherals/uart_simulator.v"
-]
-
-BACKEND_RTL_FILES = [
-    "core/backend/backend.v",
-    "core/backend/alu.v",
-    "core/backend/alu_control_unit.v",
-    "core/backend/branch_unit.v",
-    "core/backend/control_unit.v",
-    "core/backend/control_status_register_file.v",
-    "core/backend/instruction_decoder.v",
-    "core/backend/forwarding_unit.v",
-    "core/backend/hazard_detection_unit.v",
-    "core/backend/immediate_generator.v",
-    "core/backend/load_store_unit.v",
-    "core/backend/regfile.v",
-    "peripherals/timer.v",
-    "peripherals/uart_simulator.v"
-]
-
 def run_test(test_name, toplevel, module_name, verilog_sources=None, python_search=None, **kwargs):
     """
     Wrapper around cocotb_test.simulator.run to enforce consistent build directories.
@@ -135,9 +93,14 @@ def run_test_simple(module_name, toplevel, rtl_files, file_path):
     """
     tests_dir = os.path.dirname(os.path.abspath(file_path))
     
-    # Resolve RTL files
-    abs_rtl_files = [os.path.join(RTL_DIR, f) for f in rtl_files]
-    
+    # Resolve RTL files, handling both absolute and relative paths
+    abs_rtl_files = []
+    for f in rtl_files:
+        if os.path.isabs(f):
+            abs_rtl_files.append(f)
+        else:
+            abs_rtl_files.append(os.path.join(RTL_DIR, f))
+
     run_test(
         test_name=module_name,
         toplevel=toplevel,

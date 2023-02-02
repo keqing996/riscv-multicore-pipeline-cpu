@@ -5,6 +5,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "cSpell.words": [
+        "CFLAGS",
         "cocotb",
         "dout",
         "dumpfile",
@@ -22,8 +23,10 @@
         "MTIP",
         "MTVEC",
         "negedge",
+        "OBJCOPY",
         "posedge",
         "regs",
+        "RISCV",
         "verilog"
     ]
 }

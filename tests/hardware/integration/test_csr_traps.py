@@ -81,13 +81,15 @@ async def test_csr_traps_program(dut):
         dut._log.error(f"Failed to inspect registers: {e}")
         raise e
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from infrastructure import run_test_simple, CHIP_TOP_RTL_FILES
+# Add tests directory to path to import infrastructure
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from infrastructure import run_test_simple
+from .common import get_rtl_files
 
 def test_csr_traps():
     run_test_simple(
         module_name="test_csr_traps",
         toplevel="chip_top",
-        rtl_files=CHIP_TOP_RTL_FILES,
+        rtl_files=get_rtl_files("core"),
         file_path=__file__
     )

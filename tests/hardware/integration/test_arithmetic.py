@@ -93,13 +93,14 @@ async def test_arithmetic_program(dut):
         dut._log.error(f"Failed to inspect registers: {e}")
         raise e
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from infrastructure import run_test_simple, CHIP_TOP_RTL_FILES
+
+from tests.hardware.infrastructure import run_test_simple
+from tests.hardware.integration.common import get_rtl_files
 
 def test_arithmetic():
     run_test_simple(
         module_name="test_arithmetic",
         toplevel="chip_top",
-        rtl_files=CHIP_TOP_RTL_FILES,
+        rtl_files=get_rtl_files("core"),
         file_path=__file__
     )
