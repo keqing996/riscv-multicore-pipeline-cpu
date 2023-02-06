@@ -1,15 +1,17 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
+from cocotb.handle import SimHandleBase
 import sys
 import os
 
-# Add tests directory to path to import infrastructure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from infrastructure import run_test_simple, BACKEND_RTL_FILES
+# Import infrastructure using absolute import
+# Note: This requires the project root to be in PYTHONPATH or installed as a package
+from tests.infrastructure import run_test_simple
+from tests.hardware.integration.common import get_rtl_files
 
 @cocotb.test()
-async def backend_stall_test(dut):
+async def backend_stall_test(dut: SimHandleBase) -> None:
     """
     Test that backend handles stall_fetch_stage correctly.
     Verifies that when instruction_grant is low (fetch stall),
@@ -109,7 +111,7 @@ async def backend_stall_test(dut):
     dut._log.info("backend_stall_test Passed")
 
 @cocotb.test()
-async def backend_data_stall_test(dut):
+async def backend_data_stall_test(dut: SimHandleBase) -> None:
     """
     Test that backend handles data_memory_busy (Data Cache Stall) correctly.
     Verifies that when data_memory_busy is high, the ENTIRE backend (MEM/WB, EX/MEM, ID/EX) stalls.
@@ -196,10 +198,7 @@ async def backend_data_stall_test(dut):
     dut._log.info("Cycle 5 Check Passed: Pipeline Advanced")
     dut._log.info("backend_data_stall_test Passed")
 
-from infrastructure import run_test_simple
-from .common import get_rtl_files
-
-def test_backend():
+def test_backend() -> None:
     run_test_simple(
         module_name="test_backend",
         toplevel="backend",

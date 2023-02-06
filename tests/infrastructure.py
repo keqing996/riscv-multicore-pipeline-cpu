@@ -1,49 +1,67 @@
-import sys
 import os
-import glob
-import subprocess
 import shutil
+import subprocess
+from pathlib import Path
+from typing import List, Optional, Dict, Any, Union
+
 from cocotb_test.simulator import run as cocotb_run
 
 # Root directory
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RTL_DIR = os.path.join(ROOT_DIR, "rtl")
-TESTS_DIR = os.path.join(ROOT_DIR, "tests")
-TOOLS_DIR = os.path.join(ROOT_DIR, "tools")
-BUILD_DIR = os.path.join(ROOT_DIR, "build")
+# tests/infrastructure.py -> tests/ -> root
+ROOT_DIR = Path(__file__).resolve().parent.parent
+RTL_DIR = ROOT_DIR / "rtl"
+TESTS_DIR = ROOT_DIR / "tests"
+TOOLS_DIR = ROOT_DIR / "tools"
+BUILD_DIR = ROOT_DIR / "build"
 
 # Common Verilog sources
-VERILOG_SOURCES = glob.glob(os.path.join(RTL_DIR, "**", "*.v"), recursive=True)
+# Using rglob for recursive globbing
+VERILOG_SOURCES = list(RTL_DIR.rglob("*.v"))
 
 # Compilation Settings
-RISCV_CC = "/opt/homebrew/opt/llvm/bin/clang"
-RISCV_OBJCOPY = "/opt/homebrew/opt/llvm/bin/llvm-objcopy"
+# Try to find tools in environment, fallback to known paths or raise error if critical
+RISCV_CC = os.environ.get("RISCV_CC") or shutil.which("clang") or "/opt/homebrew/opt/llvm/bin/clang"
+RISCV_OBJCOPY = os.environ.get("RISCV_OBJCOPY") or shutil.which("llvm-objcopy") or "/opt/homebrew/opt/llvm/bin/llvm-objcopy"
+
+# Ensure tools exist if we are going to use them for software tests
+# We don't check them immediately to allow hardware-only tests to run without riscv toolchain
+
 RISCV_CFLAGS = [
     "--target=riscv32", "-march=rv32i", "-mabi=ilp32",
     "-ffreestanding", "-nostdlib", "-O2", "-g", "-Wall",
-    f"-I{os.path.join(TESTS_DIR, 'common')}"
+    f"-I{TESTS_DIR / 'common'}"
 ]
-LINKER_SCRIPT = os.path.join(TESTS_DIR, "common", "link.ld")
-RISCV_LDFLAGS = ["-T", LINKER_SCRIPT]
-HEX_GEN_SCRIPT = os.path.join(TOOLS_DIR, "make_hex.py")
+LINKER_SCRIPT = TESTS_DIR / "common" / "link.ld"
+RISCV_LDFLAGS = ["-T", str(LINKER_SCRIPT)]
+HEX_GEN_SCRIPT = TOOLS_DIR / "make_hex.py"
 
-def run_test(test_name, toplevel, module_name, verilog_sources=None, python_search=None, **kwargs):
+def run_test(
+    test_name: str,
+    toplevel: str,
+    module_name: str,
+    verilog_sources: Optional[List[Union[str, Path]]] = None,
+    python_search: Optional[List[Union[str, Path]]] = None,
+    **kwargs: Any
+) -> None:
     """
     Wrapper around cocotb_test.simulator.run to enforce consistent build directories.
     """
     if verilog_sources is None:
-        verilog_sources = list(VERILOG_SOURCES)
+        # Convert Path objects to strings for cocotb
+        v_sources = [str(p) for p in VERILOG_SOURCES]
     else:
-        verilog_sources = list(verilog_sources)
+        v_sources = [str(p) for p in verilog_sources]
         
     if python_search is None:
-        python_search = []
+        p_search = []
+    else:
+        p_search = [str(p) for p in python_search]
         
     # Centralized build directory: build/<test_name>
-    sim_build = os.path.join(BUILD_DIR, test_name)
+    sim_build = BUILD_DIR / test_name
 
     # Clean up sim_build directory if it exists
-    if os.path.exists(sim_build):
+    if sim_build.exists():
         shutil.rmtree(sim_build)
     
     # Ensure PYTHONDONTWRITEBYTECODE is passed to the simulator process
@@ -52,22 +70,22 @@ def run_test(test_name, toplevel, module_name, verilog_sources=None, python_sear
     kwargs["extra_env"] = extra_env
 
     # Manually generate wave dump module to ensure VCD generation
-    os.makedirs(sim_build, exist_ok=True)
-    dump_file = os.path.join(sim_build, f"dump_{test_name}.v")
+    sim_build.mkdir(parents=True, exist_ok=True)
+    dump_file = sim_build / f"dump_{test_name}.v"
     
     dump_vars_content = f"        $dumpvars(0, {toplevel});"
 
-    with open(dump_file, "w") as f:
-        f.write(f"""
+    dump_file_content = f"""
 module dump_waves;
     initial begin
         $dumpfile("dump.vcd");
 {dump_vars_content}
     end
 endmodule
-""")
+"""
+    dump_file.write_text(dump_file_content)
     
-    verilog_sources.append(dump_file)
+    v_sources.append(str(dump_file))
 
     # Remove waves from kwargs if present to avoid conflict
     kwargs.pop("waves", None)
@@ -76,30 +94,38 @@ endmodule
     sim_toplevel = [toplevel, "dump_waves"]
 
     cocotb_run(
-        verilog_sources=verilog_sources,
+        verilog_sources=v_sources,
         toplevel=sim_toplevel,
         module=module_name,
-        python_search=python_search,
-        sim_build=sim_build,
+        python_search=p_search,
+        sim_build=str(sim_build),
         waves=False,
         timescale="1ns/1ps",
         **kwargs
     )
 
-def run_test_simple(module_name, toplevel, rtl_files, file_path):
+def run_test_simple(
+    module_name: str,
+    toplevel: str,
+    rtl_files: List[Union[str, Path]],
+    file_path: Union[str, Path]
+) -> None:
     """
     Simplified wrapper for running hardware tests.
     Resolves RTL paths relative to RTL_DIR.
     """
-    tests_dir = os.path.dirname(os.path.abspath(file_path))
+    # Ensure file_path is a Path object
+    test_file_path = Path(file_path).resolve()
+    tests_dir = test_file_path.parent
     
     # Resolve RTL files, handling both absolute and relative paths
-    abs_rtl_files = []
+    abs_rtl_files: List[str] = []
     for f in rtl_files:
-        if os.path.isabs(f):
-            abs_rtl_files.append(f)
+        path_f = Path(f)
+        if path_f.is_absolute():
+            abs_rtl_files.append(str(path_f))
         else:
-            abs_rtl_files.append(os.path.join(RTL_DIR, f))
+            abs_rtl_files.append(str(RTL_DIR / path_f))
 
     run_test(
         test_name=module_name,
@@ -109,31 +135,34 @@ def run_test_simple(module_name, toplevel, rtl_files, file_path):
         verilog_sources=abs_rtl_files
     )
 
-def compile_software_test(test_name, test_dir, output_dir):
+def compile_software_test(test_name: str, test_dir: Union[str, Path], output_dir: Union[str, Path]) -> str:
     """Compiles C code to Hex."""
     print(f"Compiling {test_name}...")
     
+    test_dir_path = Path(test_dir)
+    output_dir_path = Path(output_dir)
+    
     # Source files
     srcs = [
-        os.path.join(test_dir, "start.S"),
-        os.path.join(test_dir, "main.c"),
-        os.path.join(TESTS_DIR, "common", "common.c")
+        str(test_dir_path / "start.S"),
+        str(test_dir_path / "main.c"),
+        str(TESTS_DIR / "common" / "common.c")
     ]
     
-    elf_file = os.path.join(output_dir, f"{test_name}.elf")
-    bin_file = os.path.join(output_dir, f"{test_name}.bin")
-    hex_file = os.path.join(output_dir, "program.hex")
+    elf_file = output_dir_path / f"{test_name}.elf"
+    bin_file = output_dir_path / f"{test_name}.bin"
+    hex_file = output_dir_path / "program.hex"
     
     # 1. Compile to ELF
-    cmd_compile = [RISCV_CC] + RISCV_CFLAGS + RISCV_LDFLAGS + srcs + ["-o", elf_file]
+    cmd_compile = [str(RISCV_CC)] + RISCV_CFLAGS + RISCV_LDFLAGS + srcs + ["-o", str(elf_file)]
     subprocess.check_call(cmd_compile)
     
     # 2. Objcopy to Binary
-    cmd_objcopy = [RISCV_OBJCOPY, "-O", "binary", elf_file, bin_file]
+    cmd_objcopy = [str(RISCV_OBJCOPY), "-O", "binary", str(elf_file), str(bin_file)]
     subprocess.check_call(cmd_objcopy)
     
     # 3. Generate Hex
     with open(hex_file, "w") as f:
-        subprocess.check_call(["python3", HEX_GEN_SCRIPT, bin_file], stdout=f)
+        subprocess.check_call(["python3", str(HEX_GEN_SCRIPT), str(bin_file)], stdout=f)
         
-    return hex_file
+    return str(hex_file)
