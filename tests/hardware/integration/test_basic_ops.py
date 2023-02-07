@@ -90,10 +90,8 @@ async def test_basic_ops_program(dut):
         dut._log.error(f"Failed to inspect registers: {e}")
         raise e
 
-# Add tests directory to path to import infrastructure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from infrastructure import run_test_simple
-from .common import get_rtl_files
+from tests.infrastructure import run_test_simple
+from tests.hardware.integration.common import get_rtl_files
 
 def test_basic_ops():
     run_test_simple(

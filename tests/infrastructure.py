@@ -29,9 +29,9 @@ RISCV_OBJCOPY = os.environ.get("RISCV_OBJCOPY") or shutil.which("llvm-objcopy") 
 RISCV_CFLAGS = [
     "--target=riscv32", "-march=rv32i", "-mabi=ilp32",
     "-ffreestanding", "-nostdlib", "-O2", "-g", "-Wall",
-    f"-I{TESTS_DIR / 'common'}"
+    f"-I{TESTS_DIR / 'software' / 'common'}"
 ]
-LINKER_SCRIPT = TESTS_DIR / "common" / "link.ld"
+LINKER_SCRIPT = TESTS_DIR / "software" / "common" / "link.ld"
 RISCV_LDFLAGS = ["-T", str(LINKER_SCRIPT)]
 HEX_GEN_SCRIPT = TOOLS_DIR / "make_hex.py"
 
@@ -146,7 +146,7 @@ def compile_software_test(test_name: str, test_dir: Union[str, Path], output_dir
     srcs = [
         str(test_dir_path / "start.S"),
         str(test_dir_path / "main.c"),
-        str(TESTS_DIR / "common" / "common.c")
+        str(TESTS_DIR / "software" / "common" / "common.c")
     ]
     
     elf_file = output_dir_path / f"{test_name}.elf"

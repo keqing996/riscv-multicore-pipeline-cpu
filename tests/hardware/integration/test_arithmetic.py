@@ -94,7 +94,7 @@ async def test_arithmetic_program(dut):
         raise e
 
 
-from tests.hardware.infrastructure import run_test_simple
+from tests.infrastructure import run_test_simple
 from tests.hardware.integration.common import get_rtl_files
 
 def test_arithmetic():

@@ -3,9 +3,7 @@ from cocotb.triggers import Timer
 import sys
 import os
 
-# Add parent directory to path to import infrastructure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from infrastructure import run_test_simple
+from tests.infrastructure import run_test_simple
 
 @cocotb.test()
 async def test_alu_control_xor(dut):
