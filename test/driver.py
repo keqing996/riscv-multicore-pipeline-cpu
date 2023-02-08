@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Union
-import env
+from test import env
 from cocotb_test.simulator import run as cocotb_run
 
 def run_hardware_test(
@@ -56,11 +56,21 @@ endmodule
     # Add dump_waves to toplevel to ensure it is simulated
     sim_toplevel = [toplevel, "dump_waves"]
 
+    # Setup python_search to include test directories
+    python_search = kwargs.pop("python_search", [])
+    if not isinstance(python_search, list):
+        python_search = [python_search]
+    
+    project_root = env.get_project_root()
+    python_search.append(str(project_root / "test" / "hardware" / "unit"))
+    python_search.append(str(project_root / "test" / "hardware" / "integration"))
+    python_search.append(str(project_root))
+
     cocotb_run(
         verilog_sources=abs_rtl_files,
         toplevel=sim_toplevel,
         module=module_name,
-        python_search=[],
+        python_search=python_search,
         sim_build=str(build_dir),
         waves=False,
         timescale="1ns/1ps",

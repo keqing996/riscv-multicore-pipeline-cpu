@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def branch_unit_test(dut):
@@ -51,9 +49,8 @@ async def branch_unit_test(dut):
     dut._log.info("Branch Unit Test Passed!")
 
 def test_branch_unit():
-    run_test_simple(
-        module_name="test_branch_unit",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="branch_unit",
-        rtl_files=["core/backend/branch_unit.v"],
-        file_path=__file__
+        verilog_sources=["core/backend/branch_unit.v"]
     )

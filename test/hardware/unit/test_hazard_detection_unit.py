@@ -1,9 +1,7 @@
 import cocotb
 from cocotb.triggers import Timer
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def hazard_detection_unit_test(dut):
@@ -42,9 +40,8 @@ async def hazard_detection_unit_test(dut):
     dut._log.info("Hazard Detection Unit Test Passed!")
 
 def test_hazard_detection_unit():
-    run_test_simple(
-        module_name="test_hazard_detection_unit",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="hazard_detection_unit",
-        rtl_files=["core/backend/hazard_detection_unit.v"],
-        file_path=__file__
+        verilog_sources=["core/backend/hazard_detection_unit.v"]
     )

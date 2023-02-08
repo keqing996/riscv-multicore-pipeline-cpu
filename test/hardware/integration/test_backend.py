@@ -2,13 +2,9 @@ import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
 from cocotb.handle import SimHandleBase
-import sys
-import os
-
-# Import infrastructure using absolute import
-# Note: This requires the project root to be in PYTHONPATH or installed as a package
-from backup.infrastructure import run_test_simple
-from backup.hardware.integration.common import get_rtl_files
+from pathlib import Path
+from test.driver import run_hardware_test
+from test.env import get_all_rtl_files
 
 @cocotb.test()
 async def backend_stall_test(dut: SimHandleBase) -> None:
@@ -199,9 +195,8 @@ async def backend_data_stall_test(dut: SimHandleBase) -> None:
     dut._log.info("backend_data_stall_test Passed")
 
 def test_backend() -> None:
-    run_test_simple(
-        module_name="test_backend",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="backend",
-        rtl_files=get_rtl_files("backend"),
-        file_path=__file__
+        verilog_sources=get_all_rtl_files()
     )

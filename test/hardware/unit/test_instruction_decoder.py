@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def instruction_decoder_test(dut):
@@ -36,9 +34,8 @@ async def instruction_decoder_test(dut):
     dut._log.info("Instruction Decoder Test Passed!")
 
 def test_instruction_decoder():
-    run_test_simple(
-        module_name="test_instruction_decoder",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="instruction_decoder",
-        rtl_files=["core/backend/instruction_decoder.v"],
-        file_path=__file__
+        verilog_sources=["core/backend/instruction_decoder.v"]
     )

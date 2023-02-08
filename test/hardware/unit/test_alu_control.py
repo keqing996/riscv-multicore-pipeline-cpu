@@ -1,9 +1,7 @@
 import cocotb
 from cocotb.triggers import Timer
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def test_alu_control_xor(dut):
@@ -34,9 +32,8 @@ async def test_alu_control_sub(dut):
     assert control_code == 0b1000, f"Expected SUB (8), got {control_code}"
 
 def test_alu_control_runner():
-    run_test_simple(
-        module_name="test_alu_control",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="alu_control_unit",
-        rtl_files=["core/backend/alu_control_unit.v"],
-        file_path=__file__
+        verilog_sources=["core/backend/alu_control_unit.v"]
     )

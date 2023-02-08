@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def branch_predictor_test(dut):
@@ -115,9 +113,8 @@ async def branch_predictor_test(dut):
     dut._log.info("Branch Predictor Test Passed!")
 
 def test_branch_predictor():
-    run_test_simple(
-        module_name="test_branch_predictor",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="branch_predictor",
-        rtl_files=["core/frontend/branch_predictor.v"],
-        file_path=__file__
+        verilog_sources=["core/frontend/branch_predictor.v"]
     )

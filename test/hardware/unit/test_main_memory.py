@@ -2,10 +2,8 @@ import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
 import random
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def main_memory_test(dut):
@@ -83,9 +81,8 @@ async def main_memory_test(dut):
     dut._log.info("Main Memory Test Passed!")
 
 def test_main_memory():
-    run_test_simple(
-        module_name="test_main_memory",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="main_memory",
-        rtl_files=["memory/main_memory.v"],
-        file_path=__file__
+        verilog_sources=["memory/main_memory.v"]
     )

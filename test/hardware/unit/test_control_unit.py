@@ -1,9 +1,7 @@
 import cocotb
 from cocotb.triggers import Timer
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def control_unit_test(dut):
@@ -103,9 +101,8 @@ async def control_unit_test(dut):
     dut._log.info("Control Unit Test Passed!")
 
 def test_control_unit():
-    run_test_simple(
-        module_name="test_control_unit",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="control_unit",
-        rtl_files=["core/backend/control_unit.v"],
-        file_path=__file__
+        verilog_sources=["core/backend/control_unit.v"]
     )

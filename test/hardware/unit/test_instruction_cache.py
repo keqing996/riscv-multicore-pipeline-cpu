@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def instruction_cache_test(dut):
@@ -130,9 +128,8 @@ async def instruction_cache_test(dut):
     dut._log.info("Instruction Cache Test Passed!")
 
 def test_instruction_cache():
-    run_test_simple(
-        module_name="test_instruction_cache",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="instruction_cache",
-        rtl_files=["cache/instruction_cache.v"],
-        file_path=__file__
+        verilog_sources=["cache/instruction_cache.v"]
     )

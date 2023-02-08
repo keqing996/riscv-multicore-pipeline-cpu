@@ -2,10 +2,8 @@ import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
 import random
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def program_counter_test(dut):
@@ -37,9 +35,8 @@ async def program_counter_test(dut):
     dut._log.info("Program Counter Test Passed!")
 
 def test_program_counter():
-    run_test_simple(
-        module_name="test_program_counter",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="program_counter",
-        rtl_files=["core/frontend/program_counter.v"],
-        file_path=__file__
+        verilog_sources=["core/frontend/program_counter.v"]
     )

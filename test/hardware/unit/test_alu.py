@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 # ALU Control Codes (Must match RTL)
 ALU_ADD  = 0b0000
@@ -101,10 +99,9 @@ async def alu_basic_test(dut):
     dut._log.info("ALU Basic Test Passed!")
 
 def test_alu():
-    run_test_simple(
-        module_name="test_alu",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="alu",
-        rtl_files=["core/backend/alu.v"],
-        file_path=__file__
+        verilog_sources=["core/backend/alu.v"]
     )
 

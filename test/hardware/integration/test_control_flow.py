@@ -1,8 +1,9 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
-import os
-import sys
+from pathlib import Path
+from test.driver import run_hardware_test
+from test.env import get_all_rtl_files
 
 # Machine Code for Control Flow
 # 0: ADDI x1, x0, 10  (x1 = 10)
@@ -79,13 +80,9 @@ async def test_control_flow_program(dut):
         dut._log.error(f"Failed to inspect registers: {e}")
         raise e
 
-from backup.infrastructure import run_test_simple
-from backup.hardware.integration.common import get_rtl_files
-
 def test_control_flow():
-    run_test_simple(
-        module_name="test_control_flow",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="chip_top",
-        rtl_files=get_rtl_files("core"),
-        file_path=__file__
+        verilog_sources=get_all_rtl_files()
     )

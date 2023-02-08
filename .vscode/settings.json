@@ -30,5 +30,4 @@
         "RISCV",
         "verilog"
     ],
-    "python.analysis.typeCheckingMode": "standard"
 }

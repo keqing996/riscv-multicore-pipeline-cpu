@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
-import sys
-import os
-
-from backup.infrastructure import run_test_simple
+from pathlib import Path
+from test.driver import run_hardware_test
 
 @cocotb.test()
 async def timer_test(dut):
@@ -91,9 +89,8 @@ async def timer_test(dut):
     dut._log.info("Timer Test Passed!")
 
 def test_timer():
-    run_test_simple(
-        module_name="test_timer",
+    run_hardware_test(
+        module_name=Path(__file__).stem,
         toplevel="timer",
-        rtl_files=["peripherals/timer.v"],
-        file_path=__file__
+        verilog_sources=["peripherals/timer.v"]
     )
