@@ -1,6 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "tests"
+        "test"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
@@ -25,6 +25,7 @@
         "negedge",
         "OBJCOPY",
         "posedge",
+        "PYTHONDONTWRITEBYTECODE",
         "regs",
         "RISCV",
         "verilog"
