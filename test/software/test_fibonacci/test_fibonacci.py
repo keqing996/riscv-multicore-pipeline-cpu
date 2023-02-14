@@ -3,8 +3,8 @@ from cocotb.triggers import RisingEdge, Timer
 from cocotb.clock import Clock
 from pathlib import Path
 from typing import List, Union
-from backup.infrastructure import compile_software_test, run_test_simple
-from backup.hardware.integration.common import get_rtl_files
+from test.driver import run_software_test
+from test.env import get_all_rtl_files
 
 @cocotb.test()
 async def fibonacci_test(dut):
@@ -92,27 +92,13 @@ async def fibonacci_test(dut):
         raise e
 
 def test_fibonacci():
-    test_name = "test_fibonacci"
-    test_dir = Path(__file__).parent
-    
-    artifact_dir = Path(__file__).parent.parent.parent.parent / "build" / f"{test_name}_artifacts"
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-
-    # Compile C code
-    hex_file = compile_software_test(
-        test_name=test_name,
-        test_dir=test_dir,
-        output_dir=artifact_dir
-    )
-    
-    # Run Simulation
-    # Cast get_rtl_files result to satisfy type checker
-    rtl_sources: List[Union[str, Path]] = list(get_rtl_files("core"))
-    
-    run_test_simple(
-        module_name="test_fibonacci",
+    run_software_test(
+        module_name=Path(__file__).stem,
         toplevel="chip_top",
-        rtl_files=rtl_sources,
-        file_path=__file__,
-        program_hex_path=hex_file # Pass the hex file to be copied
+        verilog_sources=get_all_rtl_files(),
+        c_sources=[
+            "test_fibonacci/main.c",
+            "test_fibonacci/start.S"
+        ],
+        c_includes=[]
     )

@@ -4,36 +4,37 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Union
 from test import env
+from test.util import toolchain
+from test.util import program
 from cocotb_test.simulator import run as cocotb_run
 
-def run_hardware_test(
+def _internal_resolve_path(
+        path_list: List[Union[str, Path]], 
+        relative_parent: Union[str, Path]
+) -> List[str]:
+    abs_path_list: List[Union[str, Path]] = []
+    for f in path_list:
+        path_f = Path(f)
+        if path_f.is_absolute():
+            abs_path_list.append(str(path_f))
+        else:
+            abs_path_list.append(str(relative_parent / path_f))
+    return abs_path_list
+
+def _internal_run_test(
+        build_dir: Path,
         module_name: str,
         verilog_sources: List[Union[str, Path]],
         toplevel: str,
         **kwargs: Any
-) -> None:
-    """
-    Wrapper around cocotb_test.simulator.run to enforce consistent build directories.
-    """
-    # Centralized build directory: build/<test_name>
-    build_dir = env.get_build_dir() / module_name
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
-    build_dir.mkdir(parents=True, exist_ok=True)
-
+):
     # Ensure PYTHONDONTWRITEBYTECODE is passed to the simulator process
     extra_env = kwargs.get("extra_env", {})
     extra_env["PYTHONDONTWRITEBYTECODE"] = "1"
     kwargs["extra_env"] = extra_env
 
     # Resolve RTL files, handling both absolute and relative paths
-    abs_rtl_files: List[Union[str, Path]] = []
-    for f in verilog_sources:
-        path_f = Path(f)
-        if path_f.is_absolute():
-            abs_rtl_files.append(str(path_f))
-        else:
-            abs_rtl_files.append(str(env.get_rtl_dir() / path_f))
+    abs_rtl_files = _internal_resolve_path(verilog_sources, env.get_rtl_dir())
 
     # VCD file generator
     dump_file = build_dir / f"dump_{module_name}.v"
@@ -77,4 +78,60 @@ endmodule
         **kwargs
     )
 
+def run_hardware_test(
+        module_name: str,
+        verilog_sources: List[Union[str, Path]],
+        toplevel: str,
+        **kwargs: Any
+) -> None:
+    """
+    Wrapper around cocotb_test.simulator.run to enforce consistent build directories.
+    """
+    # Centralized build directory: build/<test_name>
+    build_dir = env.get_build_dir() / module_name
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+    build_dir.mkdir(parents=True, exist_ok=True)
 
+    _internal_run_test(build_dir, module_name, verilog_sources, toplevel, **kwargs)
+
+
+def run_software_test(
+        module_name: str,
+        verilog_sources: List[Union[str, Path]],
+        c_sources: List[Union[str, Path]],
+        c_includes: List[Union[str, Path]],
+        toplevel: str,
+        **kwargs: Any
+) -> None:
+    # Centralized build directory: build/<test_name>
+    build_dir = env.get_build_dir() / module_name
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+    build_dir.mkdir(parents=True, exist_ok=True)
+
+    elf_file = build_dir / "program.elf"
+    bin_file = build_dir / "program.bin"
+    hex_file = build_dir / "program.hex"
+
+    # Resolve C files, handling both absolute and relative paths
+    abs_c_sources = _internal_resolve_path(c_sources, env.get_software_dir())
+    abs_c_includes = _internal_resolve_path(c_includes, env.get_software_dir())
+
+    # Compile C files
+    cmd_compile: List[str] = []
+    cmd_compile += [str(toolchain.get_riscv_compiler())]
+    cmd_compile += toolchain.get_riscv_cflags(abs_c_includes)
+    cmd_compile += [str(env.get_linker_script())]
+    cmd_compile += abs_c_sources
+    cmd_compile += ["-o", str(elf_file)]
+    subprocess.check_call(cmd_compile)
+
+    # Convert ELF to Binary
+    cmd_objcopy = [toolchain.get_llvm_objcopy(), "-O", "binary", str(elf_file), str(bin_file)]
+    subprocess.check_call(cmd_objcopy)
+
+    # Generate Hex
+    program.generate_hex_program(str(bin_file), str(hex_file))
+
+    _internal_run_test(build_dir, module_name, verilog_sources, toplevel, **kwargs)
