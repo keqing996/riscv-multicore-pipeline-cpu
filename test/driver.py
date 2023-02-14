@@ -63,9 +63,17 @@ endmodule
         python_search = [python_search]
     
     project_root = env.get_project_root()
-    python_search.append(str(project_root / "test" / "hardware" / "unit"))
-    python_search.append(str(project_root / "test" / "hardware" / "integration"))
     python_search.append(str(project_root))
+
+    # Add all subdirectories under test/ to python_search
+    test_root = project_root / "test"
+    if test_root.exists():
+        python_search.append(str(test_root))
+        for root, dirs, files in os.walk(test_root):
+            if "__pycache__" in dirs:
+                dirs.remove("__pycache__")
+            for d in dirs:
+                python_search.append(os.path.join(root, d))
 
     cocotb_run(
         verilog_sources=abs_rtl_files,
