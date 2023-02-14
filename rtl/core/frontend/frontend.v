@@ -36,7 +36,7 @@ module frontend (
     // Signal Declarations
     // =========================================================================
 
-    wire [31:0] program_counter_next;
+    reg [31:0] program_counter_next;
     wire [31:0] program_counter_current;
     wire [31:0] fetch_stage_instruction;
 
@@ -78,16 +78,23 @@ module frontend (
     );
 
     // PC Next Logic
-    // Priority: Reset > Interrupt/Trap > Mispredict > Prediction > Next
+    // Priority: Reset > Interrupt/Trap > Mispredict > Stall > Prediction > Next
     // Note: Mispredict logic is handled in Backend to generate flush signals, 
     // but we need to know WHICH PC to take.
     // Backend provides: correct_pc (for mispredict), trap_pc (for traps)
-    
-    assign program_counter_next = pc_mux_select_trap ? trap_pc :
-                     stall_global ? program_counter_current : // Stall: Hold PC
-                     (flush_due_to_branch || flush_due_to_jump) ? correct_pc : // Mispredict recovery
-                     prediction_taken ? prediction_target :
-                     (program_counter_current + 4);
+    always @(*) begin
+        if (pc_mux_select_trap) begin
+            program_counter_next = trap_pc;
+        end else if (flush_due_to_branch || flush_due_to_jump) begin
+            program_counter_next = correct_pc; // Mispredict recovery
+        end else if (stall_global) begin
+            program_counter_next = program_counter_current; // Stall: Hold PC
+        end else if (prediction_taken) begin
+            program_counter_next = prediction_target;
+        end else begin
+            program_counter_next = program_counter_current + 4;
+        end
+    end
 
     // IF/ID Pipeline Register
     always @(posedge clk or negedge rst_n) begin

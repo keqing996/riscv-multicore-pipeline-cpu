@@ -69,7 +69,7 @@ endmodule
     test_root = project_root / "test"
     if test_root.exists():
         python_search.append(str(test_root))
-        for root, dirs, files in os.walk(test_root):
+        for root, dirs, files in os.walk(test_root, topdown=False):
             if "__pycache__" in dirs:
                 dirs.remove("__pycache__")
             for d in dirs:
