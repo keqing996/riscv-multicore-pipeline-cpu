@@ -174,6 +174,8 @@ module backend (
     control_unit u_control_unit (
         .opcode(opcode),
         .function_3(function_3),
+        .function_7(function_7),
+        .rs2_index(rs2_index_decode),
         .rs1_index(rs1_index_decode),
         .branch(branch_decode),
         .jump(jump_decode),
@@ -272,7 +274,7 @@ module backend (
             is_jalr_execute <= 0;
         end else if (stall_mem_stage) begin
             // Stall ID/EX (Hold value)
-        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_hazard || stall_fetch_stage) begin
+        end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard || (stall_fetch_stage && !(is_environment_call_decode || is_machine_return_decode))) begin
             // Flush ID/EX (Insert Bubble)
             is_branch_execute <= 0;
             is_jump_execute <= 0;
@@ -334,11 +336,11 @@ module backend (
     );
 
     // ALU Input Muxes (Forwarding)
-    assign forward_a_value = (forward_a_select == 2'b10) ? ex_mem_alu_result :
+    assign forward_a_value = (forward_a_select == 2'b10) ? (ex_mem_csr_to_register_select ? ex_mem_csr_read_data : ex_mem_alu_result) :
                            (forward_a_select == 2'b01) ? write_data_writeback :
                            id_ex_rs1_data;
 
-    assign forward_b_value = (forward_b_select == 2'b10) ? ex_mem_alu_result :
+    assign forward_b_value = (forward_b_select == 2'b10) ? (ex_mem_csr_to_register_select ? ex_mem_csr_read_data : ex_mem_alu_result) :
                            (forward_b_select == 2'b01) ? write_data_writeback :
                            id_ex_rs2_data;
 

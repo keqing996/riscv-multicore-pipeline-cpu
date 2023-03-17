@@ -1,6 +1,8 @@
 module control_unit (
     input wire [6:0] opcode,
     input wire [2:0] function_3,
+    input wire [6:0] function_7,
+    input wire [4:0] rs2_index,
     input wire [4:0] rs1_index,
     output reg branch,
     output reg jump,
@@ -103,7 +105,11 @@ module control_unit (
                 case (function_3)
                     3'b000: begin // ECALL or MRET
                         register_write_enable = 0;
-                        // ECALL/MRET are funct3=0.
+                        if (function_7 == 7'b0000000 && rs2_index == 5'b00000) begin
+                            is_environment_call = 1;
+                        end else if (function_7 == 7'b0011000 && rs2_index == 5'b00010) begin
+                            is_machine_return = 1;
+                        end
                     end
                     
                     3'b001: begin // CSRRW
