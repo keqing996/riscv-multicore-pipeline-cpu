@@ -121,6 +121,7 @@ def run_software_test(
     elf_file = build_dir / "program.elf"
     bin_file = build_dir / "program.bin"
     hex_file = build_dir / "program.hex"
+    dis_file = build_dir / "program.S"
 
     # Resolve C files, handling both absolute and relative paths
     abs_c_sources = _internal_resolve_path(c_sources, env.get_software_dir())
@@ -141,5 +142,10 @@ def run_software_test(
 
     # Generate Hex
     program.generate_hex_program(str(bin_file), str(hex_file))
+
+    # Obj dump, generate human read hex
+    cmd_objdump = [toolchain.get_llvm_objdump(), "-d", str(elf_file)]
+    with open(dis_file, "w") as f:
+        subprocess.check_call(cmd_objdump, stdout=f)
 
     _internal_run_test(build_dir, module_name, verilog_sources, toplevel, **kwargs)
