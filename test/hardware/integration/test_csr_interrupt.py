@@ -13,15 +13,15 @@ PROGRAM = [
     "08000093", # 0x10: ADDI x1, x0, 0x80
     "3040a073", # 0x14: CSRRS x0, mie, x1
     "400040b7", # 0x18: LUI x1, 0x40004
-    "00808093", # 0x1C: ADDI x1, x1, 8
-    "06400113", # 0x20: ADDI x2, x0, 100
-    "0020a023", # 0x24: SW x2, 0(x1)
-    "0000006f", # 0x28: J 0x28
-    "00000013", # 0x2C: NOP
-    "00000013", # 0x30: NOP
+    "00c08293", # 0x1C: ADDI x5, x1, 12 (0x4000400C - mtimecmp high)
+    "0002a023", # 0x20: SW x0, 0(x5) (Write 0 to mtimecmp high)
+    "00808093", # 0x24: ADDI x1, x1, 8 (0x40004008 - mtimecmp low)
+    "06400113", # 0x28: ADDI x2, x0, 100
+    "0020a023", # 0x2C: SW x2, 0(x1)
+    "0000006f", # 0x30: J 0x30
     "00000013", # 0x34: NOP
     "00000013", # 0x38: NOP
-    "00000013", # 0x3C: NOP
+    "00000013", # 0x3C: NOP (Padding)
     "00100513", # 0x40: ADDI x10, x0, 1
     "00100073", # 0x44: EBREAK
 ]
@@ -44,14 +44,23 @@ async def test_csr_interrupt_program(dut):
     # 100 cycles * 10ns = 1000ns.
     # Give it enough time.
     
-    for _ in range(500):
+    for i in range(500):
         await RisingEdge(dut.clk)
         try:
             pc = dut.u_core.u_backend.id_ex_program_counter.value.integer
+            mtime = dut.u_core.u_backend.u_timer.mtime.value.integer
+            mtimecmp = dut.u_core.u_backend.u_timer.mtimecmp.value.integer
+            irq = dut.u_core.u_backend.u_timer.interrupt_request.value
+            x10_val = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+            
+            # dut._log.info(f"Cycle {i}: PC={hex(pc)}, mtime={mtime}, irq={irq}, x10={x10_val}")
             if pc == 0x44: # EBREAK
                 break
-        except:
+        except Exception as e:
             pass
+    
+    for _ in range(10):
+        await RisingEdge(dut.clk)
 
     x10 = dut.u_core.u_backend.u_regfile.registers[10].value.integer
     assert x10 == 1, f"x10 should be 1 (Interrupt Handler Executed), got {x10}"
