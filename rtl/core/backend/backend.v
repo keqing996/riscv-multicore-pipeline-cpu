@@ -215,6 +215,7 @@ module backend (
     wire [31:0] mtvec;
     wire [31:0] mepc;
     wire interrupt_enable;
+    wire [31:0] csr_new_value; // Forwarding signal
     
     control_status_register_file u_control_status_register_file (
         .clk(clk),
@@ -231,7 +232,8 @@ module backend (
         .timer_interrupt_request(timer_interrupt_request),
         .mtvec_out(mtvec),
         .mepc_out(mepc),
-        .interrupt_enable(interrupt_enable)
+        .interrupt_enable(interrupt_enable),
+        .csr_new_value_out(csr_new_value)
     );
 
     // Hazard Detection Unit
@@ -399,8 +401,16 @@ module backend (
     assign flush_due_to_jump   = 0; 
     assign flush_due_to_trap   = interrupt_enable || is_environment_call_decode || is_machine_return_decode;
 
+    // CSR Forwarding Logic
+    wire [11:0] csr_write_address_execute = id_ex_immediate[11:0];
+    wire [31:0] mtvec_forwarded;
+    wire [31:0] mepc_forwarded;
+
+    assign mtvec_forwarded = (id_ex_csr_write_enable && (csr_write_address_execute == 12'h305)) ? csr_new_value : mtvec;
+    assign mepc_forwarded  = (id_ex_csr_write_enable && (csr_write_address_execute == 12'h341)) ? csr_new_value : mepc;
+
     // Trap PC Logic
-    assign trap_pc = (interrupt_enable || is_environment_call_decode) ? mtvec : mepc;
+    assign trap_pc = (interrupt_enable || is_environment_call_decode) ? mtvec_forwarded : mepc_forwarded;
     assign pc_mux_select_trap = interrupt_enable || is_environment_call_decode || is_machine_return_decode;
 
     // EX/MEM Pipeline Register

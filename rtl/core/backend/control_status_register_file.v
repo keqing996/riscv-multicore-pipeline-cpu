@@ -18,7 +18,8 @@ module control_status_register_file (
     
     output wire [31:0] mtvec_out, // Trap Vector Base Address
     output wire [31:0] mepc_out,  // Exception PC (for MRET)
-    output reg interrupt_enable       // Trigger interrupt trap
+    output reg interrupt_enable,       // Trigger interrupt trap
+    output wire [31:0] csr_new_value_out // Forwarding: The value that will be written
 );
 
     // CSR Addresses (Machine Mode)
@@ -77,6 +78,8 @@ module control_status_register_file (
             default: new_csr_value = csr_write_data;
         endcase
     end
+
+    assign csr_new_value_out = new_csr_value;
 
     // Write Logic
     always @(posedge clk or negedge rst_n) begin
