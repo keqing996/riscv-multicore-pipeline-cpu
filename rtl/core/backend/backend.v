@@ -68,13 +68,17 @@ module backend (
     wire csr_to_register_select_decode;
     wire is_machine_return_decode;
     wire is_environment_call_decode;
+    wire is_mdu_operation_decode; // New wire
     wire is_jalr_decode = (opcode == 7'b1100111);
 
     // Hazard / Stall Signals
     wire stall_fetch_stage = !instruction_grant;
     wire stall_mem_stage = data_memory_busy;
     wire stall_hazard;
-    assign stall_pipeline = stall_hazard || stall_mem_stage;
+    wire mdu_busy; 
+    wire mdu_ready;
+    wire mdu_stall = id_ex_is_mdu_operation && !mdu_ready; // Stall until MDU is ready
+    assign stall_pipeline = stall_hazard || stall_mem_stage || mdu_stall; 
 
     // --- ID/EX Pipeline Registers ---
     // id_ex_program_counter is output
@@ -102,6 +106,7 @@ module backend (
     reg id_ex_csr_to_register_select;
     reg id_ex_is_machine_return;
     reg id_ex_is_environment_call;
+    reg id_ex_is_mdu_operation; // New register
 
     // --- EX Stage Signals ---
     wire [31:0] alu_result_execute;
@@ -189,7 +194,8 @@ module backend (
         .csr_write_enable(csr_write_enable_decode),
         .csr_to_register_select(csr_to_register_select_decode),
         .is_machine_return(is_machine_return_decode),
-        .is_environment_call(is_environment_call_decode)
+        .is_environment_call(is_environment_call_decode),
+        .is_mdu_operation(is_mdu_operation_decode) // Connected
     );
 
     // Register File
@@ -274,7 +280,8 @@ module backend (
             id_ex_is_machine_return <= 0;
             id_ex_is_environment_call <= 0;
             is_jalr_execute <= 0;
-        end else if (stall_mem_stage) begin
+            id_ex_is_mdu_operation <= 0; // Reset
+        end else if (stall_mem_stage || mdu_stall) begin // Stall if MDU is busy/not ready
             // Stall ID/EX (Hold value)
         end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard || (stall_fetch_stage && !(is_environment_call_decode || is_machine_return_decode))) begin
             // Flush ID/EX (Insert Bubble)
@@ -287,6 +294,7 @@ module backend (
             id_ex_is_machine_return <= 0;
             id_ex_is_environment_call <= 0;
             is_jalr_execute <= 0;
+            id_ex_is_mdu_operation <= 0; // Flush
             
             id_ex_prediction_taken <= 0;
             id_ex_prediction_target <= 0;
@@ -318,6 +326,7 @@ module backend (
             id_ex_is_machine_return <= is_machine_return_decode;
             id_ex_is_environment_call <= is_environment_call_decode;
             is_jalr_execute <= is_jalr_decode;
+            id_ex_is_mdu_operation <= is_mdu_operation_decode; // Assign
         end
     end
 
@@ -367,7 +376,24 @@ module backend (
         .result(alu_output_execute)
     );
 
-    assign alu_result_execute = is_jump_execute ? (id_ex_program_counter + 32'd4) : alu_output_execute;
+    // MDU (Multiplication Division Unit)
+    wire [31:0] mdu_result;
+    
+    mdu u_mdu (
+        .clk(clk),
+        .rst_n(rst_n),
+        .start(id_ex_is_mdu_operation && !mdu_busy && !mdu_ready), 
+        .operation(id_ex_function_3),
+        .operand_a(forward_a_value),
+        .operand_b(forward_b_value),
+        .busy(mdu_busy),
+        .ready(mdu_ready),
+        .result(mdu_result)
+    );
+
+    assign alu_result_execute = is_jump_execute ? (id_ex_program_counter + 32'd4) : 
+                                id_ex_is_mdu_operation ? mdu_result :
+                                alu_output_execute;
 
     // Branch Logic
     assign branch_target_execute = id_ex_program_counter + id_ex_immediate;
@@ -428,6 +454,18 @@ module backend (
             ex_mem_csr_read_data <= 0;
         end else if (stall_mem_stage) begin
             // Stall EX/MEM (Hold value)
+        end else if (mdu_stall) begin
+            // Insert Bubble (NOP) while MDU is busy/not ready
+            ex_mem_memory_read_enable <= 0;
+            ex_mem_memory_write_enable <= 0;
+            ex_mem_register_write_enable <= 0;
+            ex_mem_csr_to_register_select <= 0;
+            ex_mem_rd_index <= 0;
+            ex_mem_alu_result <= 0;
+            ex_mem_rs2_data <= 0;
+            ex_mem_function_3 <= 0;
+            ex_mem_memory_to_register_select <= 0;
+            ex_mem_csr_read_data <= 0;
         end else begin
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value;

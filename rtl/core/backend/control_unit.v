@@ -16,7 +16,8 @@ module control_unit (
     output reg csr_write_enable,
     output reg csr_to_register_select,
     output reg is_machine_return,
-    output reg is_environment_call
+    output reg is_environment_call,
+    output reg is_mdu_operation 
 );
 
     always @(*) begin
@@ -34,12 +35,17 @@ module control_unit (
         csr_to_register_select    = 0;
         is_machine_return         = 0;
         is_environment_call       = 0;
+        is_mdu_operation          = 0;
 
         case (opcode)
             // R-type: ADD, SUB, AND, OR, etc.
             7'b0110011: begin
                 register_write_enable = 1;
-                alu_operation_code    = 3'b010;
+                if (function_7 == 7'b0000001) begin
+                    is_mdu_operation = 1;
+                end else begin
+                    alu_operation_code = 3'b010;
+                end
             end
 
             // I-type: ADDI, ANDI, etc.
