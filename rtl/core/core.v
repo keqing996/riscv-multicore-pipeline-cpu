@@ -5,14 +5,15 @@ module core (
     input wire instruction_grant,      // Instruction Grant (Cache Hit/Ready)
     output wire [31:0] program_counter_address, // PC output to IMEM
 
-    // Data Memory Interface
-    output wire [31:0] data_memory_address,
-    output wire [31:0] data_memory_write_data_out,
-    output wire [3:0]  data_memory_byte_enable_out,
-    output wire        data_memory_write_enable_out,
-    output wire        data_memory_read_enable_out,
-    input  wire [31:0] data_memory_read_data_in,
-    input  wire        data_memory_busy
+    // Bus Interface
+    output wire [31:0] bus_address,
+    output wire [31:0] bus_write_data,
+    output wire [3:0]  bus_byte_enable,
+    output wire        bus_write_enable,
+    output wire        bus_read_enable,
+    input  wire [31:0] bus_read_data,
+    input  wire        bus_busy,
+    input  wire        timer_interrupt_request
 );
 
     // =========================================================================
@@ -81,13 +82,14 @@ module core (
         .if_id_prediction_taken(if_id_prediction_taken),
         .if_id_prediction_target(if_id_prediction_target),
         .instruction_grant(instruction_grant),
-        .data_memory_address(data_memory_address),
-        .data_memory_write_data_out(data_memory_write_data_out),
-        .data_memory_byte_enable_out(data_memory_byte_enable_out),
-        .data_memory_write_enable_out(data_memory_write_enable_out),
-        .data_memory_read_enable_out(data_memory_read_enable_out),
-        .data_memory_read_data_in(data_memory_read_data_in),
-        .data_memory_busy(data_memory_busy),
+        .bus_address(bus_address),
+        .bus_write_data(bus_write_data),
+        .bus_byte_enable(bus_byte_enable),
+        .bus_write_enable(bus_write_enable),
+        .bus_read_enable(bus_read_enable),
+        .bus_read_data(bus_read_data),
+        .bus_busy(bus_busy),
+        .timer_interrupt_request(timer_interrupt_request),
         .stall_pipeline(stall_pipeline),
         .flush_due_to_branch(flush_due_to_branch),
         .flush_due_to_jump(flush_due_to_jump),

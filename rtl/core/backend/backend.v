@@ -11,14 +11,15 @@ module backend (
     // I-Cache Status (for stalling)
     input wire instruction_grant,
 
-    // Data Memory Interface
-    output wire [31:0] data_memory_address,
-    output wire [31:0] data_memory_write_data_out,
-    output wire [3:0]  data_memory_byte_enable_out,
-    output wire        data_memory_write_enable_out,
-    output wire        data_memory_read_enable_out,
-    input  wire [31:0] data_memory_read_data_in,
-    input  wire        data_memory_busy,
+    // Bus Interface
+    output wire [31:0] bus_address,
+    output wire [31:0] bus_write_data,
+    output wire [3:0]  bus_byte_enable,
+    output wire        bus_write_enable,
+    output wire        bus_read_enable,
+    input  wire [31:0] bus_read_data,
+    input  wire        bus_busy,
+    input  wire        timer_interrupt_request, // Added input
 
     // Outputs to Frontend (Control / Feedback)
     output wire stall_pipeline, // To Frontend
@@ -73,7 +74,7 @@ module backend (
 
     // Hazard / Stall Signals
     wire stall_fetch_stage = !instruction_grant;
-    wire stall_mem_stage = data_memory_busy;
+    wire stall_mem_stage = bus_busy;
     wire stall_hazard;
     wire mdu_busy; 
     wire mdu_ready;
@@ -134,17 +135,8 @@ module backend (
     reg [31:0] ex_mem_csr_read_data;
 
     // --- MEM Stage Signals ---
-    wire [31:0] data_memory_read_data_aligned;
-    wire [31:0] timer_read_data;
     wire [31:0] memory_read_data_final;
-    wire [31:0] data_memory_write_data;
-    wire [3:0] data_memory_byte_enable;
-    wire is_timer_address;
-    wire is_uart_address;
-    wire timer_interrupt_request;
-    wire uart_write_enable;
-    wire timer_write_enable;
-    wire data_memory_write_enable;
+    // wire timer_interrupt_request; // Removed wire declaration, now input
 
     // --- MEM/WB Pipeline Registers ---
     reg [31:0] mem_wb_read_data;
@@ -491,39 +483,13 @@ module backend (
         .memory_read_enable(ex_mem_memory_read_enable),
         .memory_write_enable(ex_mem_memory_write_enable),
         .function_3(ex_mem_function_3),
-        .data_memory_read_data(data_memory_read_data_in),
-        .timer_read_data(timer_read_data),
-        .data_memory_write_data(data_memory_write_data),
-        .data_memory_byte_enable(data_memory_byte_enable),
-        .data_memory_write_enable(data_memory_write_enable),
-        .uart_write_enable(uart_write_enable),
-        .timer_write_enable(timer_write_enable),
+        .bus_address(bus_address),
+        .bus_write_data(bus_write_data),
+        .bus_byte_enable(bus_byte_enable),
+        .bus_write_enable(bus_write_enable),
+        .bus_read_enable(bus_read_enable),
+        .bus_read_data(bus_read_data),
         .memory_read_data_final(memory_read_data_final)
-    );
-
-    assign data_memory_address = ex_mem_alu_result;
-    assign data_memory_write_data_out = data_memory_write_data;
-    assign data_memory_byte_enable_out = data_memory_byte_enable;
-    assign data_memory_write_enable_out = data_memory_write_enable;
-    assign data_memory_read_enable_out = ex_mem_memory_read_enable;
-
-    // UART Instance
-    uart_simulator u_uart_simulator (
-        .clk(clk),
-        .write_enable(uart_write_enable),
-        .address(ex_mem_alu_result),
-        .write_data(ex_mem_rs2_data) 
-    );
-
-    // Timer Instance
-    timer u_timer (
-        .clk(clk),
-        .rst_n(rst_n),
-        .write_enable(timer_write_enable),
-        .address(ex_mem_alu_result),
-        .write_data(ex_mem_rs2_data), 
-        .read_data(timer_read_data),
-        .interrupt_request(timer_interrupt_request)
     );
 
     // MEM/WB Pipeline Register

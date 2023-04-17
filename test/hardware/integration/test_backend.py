@@ -26,8 +26,9 @@ async def backend_stall_test(dut: SimHandleBase) -> None:
     dut.if_id_prediction_taken.value = 0
     dut.if_id_prediction_target.value = 0
     dut.instruction_grant.value = 1 
-    dut.data_memory_read_data_in.value = 0
-    dut.data_memory_busy.value = 0
+    dut.bus_read_data.value = 0
+    dut.bus_busy.value = 0
+    dut.timer_interrupt_request.value = 0
     
     await Timer(20, unit="ns")
     dut.rst_n.value = 1
@@ -109,8 +110,8 @@ async def backend_stall_test(dut: SimHandleBase) -> None:
 @cocotb.test()
 async def backend_data_stall_test(dut: SimHandleBase) -> None:
     """
-    Test that backend handles data_memory_busy (Data Cache Stall) correctly.
-    Verifies that when data_memory_busy is high, the ENTIRE backend (MEM/WB, EX/MEM, ID/EX) stalls.
+    Test that backend handles bus_busy (Data Cache Stall) correctly.
+    Verifies that when bus_busy is high, the ENTIRE backend (MEM/WB, EX/MEM, ID/EX) stalls.
     """
     dut._log.info("Starting backend_data_stall_test")
     
@@ -123,7 +124,9 @@ async def backend_data_stall_test(dut: SimHandleBase) -> None:
     dut.if_id_program_counter.value = 0
     dut.if_id_instruction.value = 0x00000013 # NOP
     dut.instruction_grant.value = 1 
-    dut.data_memory_busy.value = 0
+    dut.bus_busy.value = 0
+    dut.bus_read_data.value = 0
+    dut.timer_interrupt_request.value = 0
     
     await Timer(20, unit="ns")
     dut.rst_n.value = 1
@@ -149,8 +152,8 @@ async def backend_data_stall_test(dut: SimHandleBase) -> None:
     # EX:  Instr 2 (ADDI x2)
     # ID:  Instr 3 (ADDI x3)
     
-    # 4. Assert Data Stall (data_memory_busy = 1)
-    dut.data_memory_busy.value = 1
+    # 4. Assert Data Stall (bus_busy = 1)
+    dut.bus_busy.value = 1
     # Keep inputs stable (frontend would stall too)
     
     await RisingEdge(dut.clk)
@@ -176,7 +179,7 @@ async def backend_data_stall_test(dut: SimHandleBase) -> None:
     dut._log.info("Cycle 4 Check Passed: Pipeline Frozen")
     
     # 5. Release Stall
-    dut.data_memory_busy.value = 0
+    dut.bus_busy.value = 0
     await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
     # End of Cycle 5:
