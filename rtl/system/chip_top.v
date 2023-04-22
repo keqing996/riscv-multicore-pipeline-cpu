@@ -84,15 +84,31 @@ module chip_top (
         .timer_interrupt_request(timer_irq)
     );
 
+    // Bus Ready Logic
+    wire m0_ready;
+    assign bus_busy = (bus_we || bus_re) && !m0_ready;
+
     bus_interconnect u_bus_interconnect (
-        // Master
-        .m_addr(bus_addr),
-        .m_wdata(bus_wdata),
-        .m_wstrb(bus_be),
-        .m_write(bus_we),
-        .m_enable(bus_we || bus_re),
-        .m_rdata(bus_rdata),
-        .m_ready(bus_busy_n), // Inverted logic? bus_busy is stall. ready is ack.
+        .clk(clk),
+        .rst_n(rst_n),
+
+        // Master 0 (Core 0)
+        .m0_addr(bus_addr),
+        .m0_wdata(bus_wdata),
+        .m0_wstrb(bus_be),
+        .m0_write(bus_we),
+        .m0_enable(bus_we || bus_re),
+        .m0_rdata(bus_rdata),
+        .m0_ready(m0_ready),
+
+        // Master 1 (Core 1 - Placeholder)
+        .m1_addr(32'b0),
+        .m1_wdata(32'b0),
+        .m1_wstrb(4'b0),
+        .m1_write(1'b0),
+        .m1_enable(1'b0),
+        .m1_rdata(),
+        .m1_ready(),
 
         // Slave 0 (D-Cache)
         .s0_addr(s0_addr),
@@ -122,12 +138,9 @@ module chip_top (
         .s2_ready(s2_ready)
     );
     
-    // Bus Busy Logic
-    // The core expects 'bus_busy' to be HIGH when it needs to STALL.
-    // The bus returns 'm_ready' HIGH when the transaction is DONE.
-    // So, if (enable) and (!ready), then busy = 1.
-    wire bus_busy_n;
-    assign bus_busy = (bus_we || bus_re) && !bus_busy_n;
+    // Bus Busy Logic (Moved up)
+    // wire bus_busy_n;
+    // assign bus_busy = (bus_we || bus_re) && !bus_busy_n;
 
     instruction_cache u_instruction_cache (
         .clk(clk),
