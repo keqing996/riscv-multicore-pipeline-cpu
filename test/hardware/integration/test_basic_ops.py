@@ -75,11 +75,11 @@ async def test_basic_ops_program(dut):
             
     # Verify State
     try:
-        x1 = dut.u_core.u_backend.u_regfile.registers[1].value.integer
-        x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
-        x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
-        x4 = dut.u_core.u_backend.u_regfile.registers[4].value.integer
-        x5 = dut.u_core.u_backend.u_regfile.registers[5].value.integer
+        x1 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[1].value.integer
+        x2 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[2].value.integer
+        x3 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[3].value.integer
+        x4 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[4].value.integer
+        x5 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[5].value.integer
         
         assert x1 == 10, f"x1 should be 10, got {x1}"
         assert x2 == 20, f"x2 should be 20, got {x2}"

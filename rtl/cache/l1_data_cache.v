@@ -1,4 +1,4 @@
-module data_cache (
+module l1_data_cache (
     input wire clk,
     input wire rst_n,
 

@@ -8,30 +8,26 @@ module chip_top (
     output wire [31:0] alu_res_out
 );
 
-    wire [31:0] instruction;
-    wire [31:0] program_counter_address;
-    wire instruction_grant;
+    // Bus Signals
+    // Master 0 (Tile 0)
+    wire [31:0] m0_addr;
+    wire [31:0] m0_wdata;
+    wire [3:0]  m0_be;
+    wire        m0_we;
+    wire        m0_req;
+    wire [31:0] m0_rdata;
+    wire        m0_ready;
 
-    // I-Cache Signals
-    wire [31:0] icache_memory_address;
-    wire icache_memory_request;
-    wire [31:0] icache_memory_read_data;
-    wire icache_memory_ready;
-    wire icache_stall_cpu;
+    // Master 1 (Tile 1)
+    wire [31:0] m1_addr;
+    wire [31:0] m1_wdata;
+    wire [3:0]  m1_be;
+    wire        m1_we;
+    wire        m1_req;
+    wire [31:0] m1_rdata;
+    wire        m1_ready;
 
-    // Data Memory Signals (CPU <-> D-Cache)
-    // Replaced by Bus Signals
-    wire [31:0] bus_addr;
-    wire [31:0] bus_wdata;
-    wire [3:0]  bus_be;
-    wire        bus_we;
-    wire        bus_re;
-    wire [31:0] bus_rdata;
-    wire        bus_busy;
-    wire        timer_irq;
-
-    // Bus Slave Signals
-    // Slave 0: D-Cache
+    // Slave 0 (L2 Cache)
     wire [31:0] s0_addr;
     wire [31:0] s0_wdata;
     wire [3:0]  s0_be;
@@ -40,7 +36,7 @@ module chip_top (
     wire [31:0] s0_rdata;
     wire        s0_ready;
 
-    // Slave 1: UART
+    // Slave 1 (UART)
     wire [31:0] s1_addr;
     wire [31:0] s1_wdata;
     wire [3:0]  s1_be;
@@ -49,7 +45,7 @@ module chip_top (
     wire [31:0] s1_rdata;
     wire        s1_ready;
 
-    // Slave 2: Timer
+    // Slave 2 (Timer)
     wire [31:0] s2_addr;
     wire [31:0] s2_wdata;
     wire [3:0]  s2_be;
@@ -58,60 +54,63 @@ module chip_top (
     wire [31:0] s2_rdata;
     wire        s2_ready;
 
-    // D-Cache <-> Main Memory Signals
-    wire [31:0] dcache_mem_addr;
-    wire [31:0] dcache_mem_wdata;
-    wire [3:0]  dcache_mem_be;
-    wire        dcache_mem_we;
-    wire        dcache_mem_req;
-    wire [31:0] dcache_mem_rdata;
-    wire        dcache_mem_ready;
+    // Interrupts
+    wire timer_irq;
 
-    core u_core (
+    // Core Tile 0 (Hart 0)
+    core_tile u_tile_0 (
         .clk(clk),
         .rst_n(rst_n),
-        .hart_id(32'b0),
-        .instruction(instruction),
-        .instruction_grant(!icache_stall_cpu), // Grant when not stalled
-        .program_counter_address(program_counter_address),
-        // Bus Interface
-        .bus_address(bus_addr),
-        .bus_write_data(bus_wdata),
-        .bus_byte_enable(bus_be),
-        .bus_write_enable(bus_we),
-        .bus_read_enable(bus_re),
-        .bus_read_data(bus_rdata),
-        .bus_busy(bus_busy),
-        .timer_interrupt_request(timer_irq)
+        .hart_id(32'd0),
+        .bus_addr(m0_addr),
+        .bus_wdata(m0_wdata),
+        .bus_be(m0_be),
+        .bus_we(m0_we),
+        .bus_req(m0_req),
+        .bus_rdata(m0_rdata),
+        .bus_ready(m0_ready),
+        .timer_irq(timer_irq)
     );
 
-    // Bus Ready Logic
-    wire m0_ready;
-    assign bus_busy = (bus_we || bus_re) && !m0_ready;
+    // Core Tile 1 (Hart 1)
+    core_tile u_tile_1 (
+        .clk(clk),
+        .rst_n(rst_n),
+        .hart_id(32'd1),
+        .bus_addr(m1_addr),
+        .bus_wdata(m1_wdata),
+        .bus_be(m1_be),
+        .bus_we(m1_we),
+        .bus_req(m1_req),
+        .bus_rdata(m1_rdata),
+        .bus_ready(m1_ready),
+        .timer_irq(timer_irq)
+    );
 
+    // Bus Interconnect
     bus_interconnect u_bus_interconnect (
         .clk(clk),
         .rst_n(rst_n),
 
-        // Master 0 (Core 0)
-        .m0_addr(bus_addr),
-        .m0_wdata(bus_wdata),
-        .m0_wstrb(bus_be),
-        .m0_write(bus_we),
-        .m0_enable(bus_we || bus_re),
-        .m0_rdata(bus_rdata),
+        // Master 0
+        .m0_addr(m0_addr),
+        .m0_wdata(m0_wdata),
+        .m0_wstrb(m0_be),
+        .m0_write(m0_we),
+        .m0_enable(m0_req),
+        .m0_rdata(m0_rdata),
         .m0_ready(m0_ready),
 
-        // Master 1 (Core 1 - Placeholder)
-        .m1_addr(32'b0),
-        .m1_wdata(32'b0),
-        .m1_wstrb(4'b0),
-        .m1_write(1'b0),
-        .m1_enable(1'b0),
-        .m1_rdata(),
-        .m1_ready(),
+        // Master 1
+        .m1_addr(m1_addr),
+        .m1_wdata(m1_wdata),
+        .m1_wstrb(m1_be),
+        .m1_write(m1_we),
+        .m1_enable(m1_req),
+        .m1_rdata(m1_rdata),
+        .m1_ready(m1_ready),
 
-        // Slave 0 (D-Cache)
+        // Slave 0 (L2 Cache)
         .s0_addr(s0_addr),
         .s0_wdata(s0_wdata),
         .s0_wstrb(s0_be),
@@ -138,50 +137,58 @@ module chip_top (
         .s2_rdata(s2_rdata),
         .s2_ready(s2_ready)
     );
-    
-    // Bus Busy Logic (Moved up)
-    // wire bus_busy_n;
-    // assign bus_busy = (bus_we || bus_re) && !bus_busy_n;
 
-    instruction_cache u_instruction_cache (
+    // L2 Cache <-> Memory Signals
+    wire [31:0] l2_mem_addr;
+    wire [31:0] l2_mem_wdata;
+    wire [3:0]  l2_mem_be;
+    wire        l2_mem_we;
+    wire        l2_mem_req;
+    wire [31:0] l2_mem_rdata;
+    wire        l2_mem_ready;
+
+    // L2 Cache
+    l2_cache u_l2_cache (
         .clk(clk),
         .rst_n(rst_n),
-        .program_counter_address(program_counter_address),
-        .instruction(instruction),
-        .stall_cpu(icache_stall_cpu),
-        .instruction_memory_address(icache_memory_address),
-        .instruction_memory_request(icache_memory_request),
-        .instruction_memory_read_data(icache_memory_read_data),
-        .instruction_memory_ready(icache_memory_ready)
-    );
-
-    data_cache u_data_cache (
-        .clk(clk),
-        .rst_n(rst_n),
-        // CPU Interface (Connected to Bus Slave 0)
-        .cpu_address(s0_addr),
-        .cpu_write_data(s0_wdata),
-        .cpu_byte_enable(s0_be),
-        .cpu_write_enable(s0_we && s0_en),
-        .cpu_read_enable(!s0_we && s0_en),
-        .cpu_read_data(s0_rdata),
-        .stall_cpu(dmem_busy_internal), // Cache says if it's busy
+        // Bus Slave Interface
+        .s_addr(s0_addr),
+        .s_wdata(s0_wdata),
+        .s_be(s0_be),
+        .s_we(s0_we),
+        .s_en(s0_en),
+        .s_rdata(s0_rdata),
+        .s_ready(s0_ready),
         // Memory Interface
-        .mem_address(dcache_mem_addr),
-        .mem_write_data(dcache_mem_wdata),
-        .mem_byte_enable(dcache_mem_be),
-        .mem_write_enable(dcache_mem_we),
-        .mem_request(dcache_mem_req),
-        .mem_read_data(dcache_mem_rdata),
-        .mem_ready(dcache_mem_ready)
+        .mem_addr(l2_mem_addr),
+        .mem_wdata(l2_mem_wdata),
+        .mem_be(l2_mem_be),
+        .mem_we(l2_mem_we),
+        .mem_req(l2_mem_req),
+        .mem_rdata(l2_mem_rdata),
+        .mem_ready(l2_mem_ready)
     );
-    
-    // D-Cache Ready Logic
-    // Cache 'stall_cpu' is high when busy.
-    // Bus expects 'ready' high when done.
-    // So ready = !stall_cpu
-    wire dmem_busy_internal;
-    assign s0_ready = !dmem_busy_internal;
+
+    // Memory Subsystem (Main Memory)
+    // We use Port B (D-Cache Port) for L2 connection as it supports R/W
+    // Port A (I-Cache Port) is unused
+    memory_subsystem u_memory_subsystem (
+        .clk(clk),
+        .rst_n(rst_n),
+        // Port A (Unused)
+        .icache_mem_addr(32'b0),
+        .icache_mem_req(1'b0),
+        .icache_mem_rdata(),
+        .icache_mem_ready(),
+        // Port B (Connected to L2)
+        .dcache_mem_addr(l2_mem_addr),
+        .dcache_mem_wdata(l2_mem_wdata),
+        .dcache_mem_be(l2_mem_be),
+        .dcache_mem_we(l2_mem_we),
+        .dcache_mem_req(l2_mem_req),
+        .dcache_mem_rdata(l2_mem_rdata),
+        .dcache_mem_ready(l2_mem_ready)
+    );
 
     // UART Instance (Slave 1)
     uart_simulator u_uart_simulator (
@@ -190,9 +197,8 @@ module chip_top (
         .address(s1_addr),
         .write_data(s1_wdata) 
     );
-    // UART is always ready (combinatorial write)
     assign s1_ready = 1'b1;
-    assign s1_rdata = 32'b0; // UART is write-only in this sim
+    assign s1_rdata = 32'b0;
 
     // Timer Instance (Slave 2)
     timer u_timer (
@@ -204,30 +210,11 @@ module chip_top (
         .read_data(s2_rdata),
         .interrupt_request(timer_irq)
     );
-    // Timer is always ready (combinatorial read/write)
     assign s2_ready = 1'b1;
 
-    memory_subsystem u_memory_subsystem (
-        .clk(clk),
-        .rst_n(rst_n),
-        // I-Cache Interface
-        .icache_mem_addr(icache_memory_address),
-        .icache_mem_req(icache_memory_request),
-        .icache_mem_rdata(icache_memory_read_data),
-        .icache_mem_ready(icache_memory_ready),
-        // D-Cache Interface
-        .dcache_mem_addr(dcache_mem_addr),
-        .dcache_mem_wdata(dcache_mem_wdata),
-        .dcache_mem_be(dcache_mem_be),
-        .dcache_mem_we(dcache_mem_we),
-        .dcache_mem_req(dcache_mem_req),
-        .dcache_mem_rdata(dcache_mem_rdata),
-        .dcache_mem_ready(dcache_mem_ready)
-    );
-
-    // Expose signals for observation
-    assign pc_out = program_counter_address;
-    assign instr_out = instruction;
-    assign alu_res_out = u_core.u_backend.alu_result_execute; // Or whatever signal we want to trace
+    // Expose signals for observation (from Tile 0)
+    assign pc_out = u_tile_0.pc_addr;
+    assign instr_out = u_tile_0.instruction;
+    assign alu_res_out = u_tile_0.u_core.u_backend.alu_result_execute;
 
 endmodule

@@ -1,4 +1,4 @@
-module instruction_cache (
+module l1_inst_cache (
     input wire clk,
     input wire rst_n,
 

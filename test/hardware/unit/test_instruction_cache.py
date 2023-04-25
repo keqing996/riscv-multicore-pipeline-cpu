@@ -130,6 +130,6 @@ async def instruction_cache_test(dut):
 def test_instruction_cache():
     run_hardware_test(
         module_name=Path(__file__).stem,
-        toplevel="instruction_cache",
-        verilog_sources=["cache/instruction_cache.v"]
+        toplevel="l1_inst_cache",
+        verilog_sources=["cache/l1_inst_cache.v"]
     )
