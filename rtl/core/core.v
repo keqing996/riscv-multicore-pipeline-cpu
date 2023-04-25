@@ -1,6 +1,7 @@
 module core (
     input wire clk,
     input wire rst_n,
+    input wire [31:0] hart_id, // Added: Hart ID
     input wire [31:0] instruction,   // Instruction from IMEM (IF stage)
     input wire instruction_grant,      // Instruction Grant (Cache Hit/Ready)
     output wire [31:0] program_counter_address, // PC output to IMEM
@@ -77,6 +78,7 @@ module core (
     backend u_backend (
         .clk(clk),
         .rst_n(rst_n),
+        .hart_id(hart_id), // Added: Hart ID
         .if_id_program_counter(if_id_program_counter),
         .if_id_instruction(if_id_instruction),
         .if_id_prediction_taken(if_id_prediction_taken),

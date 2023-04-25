@@ -29,6 +29,7 @@ async def backend_stall_test(dut: SimHandleBase) -> None:
     dut.bus_read_data.value = 0
     dut.bus_busy.value = 0
     dut.timer_interrupt_request.value = 0
+    dut.hart_id.value = 0
     
     await Timer(20, unit="ns")
     dut.rst_n.value = 1

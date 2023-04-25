@@ -1,6 +1,7 @@
 module control_status_register_file (
     input wire clk,
     input wire rst_n,
+    input wire [31:0] hart_id, // Added: Hart ID
     
     // Read/Write ports
     input wire [11:0] csr_address,
@@ -29,6 +30,7 @@ module control_status_register_file (
     localparam CSR_MEPC    = 12'h341;
     localparam CSR_MCAUSE  = 12'h342;
     localparam CSR_MIP     = 12'h344; // Machine Interrupt Pending
+    localparam CSR_MHARTID = 12'hf14; // Hardware Thread ID
 
     // Registers
     reg [31:0] mstatus; // Bit 3 = MIE (Global Interrupt Enable), Bit 7 = MPIE
@@ -64,6 +66,7 @@ module control_status_register_file (
             CSR_MEPC:    csr_read_data = mepc;
             CSR_MCAUSE:  csr_read_data = mcause;
             CSR_MIP:     csr_read_data = mip;
+            CSR_MHARTID: csr_read_data = hart_id;
             default:     csr_read_data = 32'b0;
         endcase
     end

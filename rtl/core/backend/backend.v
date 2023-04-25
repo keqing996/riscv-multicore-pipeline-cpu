@@ -1,6 +1,7 @@
 module backend (
     input wire clk,
     input wire rst_n,
+    input wire [31:0] hart_id, // Added: Hart ID
 
     // Inputs from Frontend (IF/ID Pipeline Register)
     input wire [31:0] if_id_program_counter,
@@ -218,6 +219,7 @@ module backend (
     control_status_register_file u_control_status_register_file (
         .clk(clk),
         .rst_n(rst_n),
+        .hart_id(hart_id), // Added: Hart ID
         .csr_address(id_ex_immediate[11:0]),
         .csr_write_enable(id_ex_csr_write_enable),
         .csr_write_data(forward_a_value),

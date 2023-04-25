@@ -21,6 +21,7 @@ async def csr_file_test(dut):
     dut.exception_cause.value = 0
     dut.machine_return_enable.value = 0
     dut.timer_interrupt_request.value = 0
+    dut.hart_id.value = 0
     
     await Timer(20, units="ns")
     dut.rst_n.value = 1
@@ -48,6 +49,18 @@ async def csr_file_test(dut):
     await Timer(1, units="ns")
     assert dut.csr_read_data.value == 0x1000, "MTVEC Write/Read Failed"
     assert dut.mtvec_out.value == 0x1000, "MTVEC Output Failed"
+
+    # Check MHARTID
+    CSR_MHARTID = 0xF14
+    dut.csr_address.value = CSR_MHARTID
+    await Timer(1, units="ns")
+    assert dut.csr_read_data.value == 0, "MHARTID Read Failed (Should be 0)"
+    
+    # Change Hart ID and check again
+    dut.hart_id.value = 1
+    await Timer(1, units="ns")
+    assert dut.csr_read_data.value == 1, "MHARTID Read Failed (Should be 1)"
+    dut.hart_id.value = 0 # Restore
 
     # 2. Exception Handling
     # Enable Interrupts (MIE bit 3 in MSTATUS)

@@ -70,6 +70,7 @@ module chip_top (
     core u_core (
         .clk(clk),
         .rst_n(rst_n),
+        .hart_id(32'b0),
         .instruction(instruction),
         .instruction_grant(!icache_stall_cpu), // Grant when not stalled
         .program_counter_address(program_counter_address),
