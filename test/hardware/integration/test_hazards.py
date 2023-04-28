@@ -54,7 +54,7 @@ async def test_hazards_program(dut):
     for i in range(1000):
         await RisingEdge(dut.clk)
         try:
-            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
+            pc_ex = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
@@ -66,11 +66,11 @@ async def test_hazards_program(dut):
             
     # Verify State
     try:
-        x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
-        x4 = dut.u_core.u_backend.u_regfile.registers[4].value.integer
-        x5 = dut.u_core.u_backend.u_regfile.registers[5].value.integer
-        x7 = dut.u_core.u_backend.u_regfile.registers[7].value.integer
-        x8 = dut.u_core.u_backend.u_regfile.registers[8].value.integer
+        x3 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[3].value.integer
+        x4 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[4].value.integer
+        x5 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[5].value.integer
+        x7 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[7].value.integer
+        x8 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[8].value.integer
         
         assert x3 == 30, f"x3 should be 30, got {x3}"
         assert x4 == 40, f"x4 should be 40, got {x4}"

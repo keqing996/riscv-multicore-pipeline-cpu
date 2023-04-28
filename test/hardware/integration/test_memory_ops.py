@@ -60,7 +60,7 @@ async def test_memory_ops_program(dut):
     for i in range(1000):
         await RisingEdge(dut.clk)
         try:
-            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
+            pc_ex = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
@@ -72,9 +72,9 @@ async def test_memory_ops_program(dut):
             
     # Verify State
     try:
-        x6 = dut.u_core.u_backend.u_regfile.registers[6].value.integer
-        x7 = dut.u_core.u_backend.u_regfile.registers[7].value.integer
-        x8 = dut.u_core.u_backend.u_regfile.registers[8].value.integer
+        x6 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[6].value.integer
+        x7 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[7].value.integer
+        x8 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[8].value.integer
         
         # Handle signed values for x6 and x7
         if x6 >= 0x80000000: x6 -= 0x100000000

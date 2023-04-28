@@ -191,13 +191,7 @@ module l2_cache (
         end else if (state == STATE_WRITE && mem_ready) begin
             // Update cache on write hit (Write-Update / Write-Through)
             if (hit) begin
-                case (word_offset)
-                    2'b00: if (s_be[0]) data_array[index][7:0]   <= s_wdata[7:0];
-                           if (s_be[1]) data_array[index][15:8]  <= s_wdata[15:8];
-                           if (s_be[2]) data_array[index][23:16] <= s_wdata[23:16];
-                           if (s_be[3]) data_array[index][31:24] <= s_wdata[31:24];
-                    2'b01: if (s_be[0]) data_array[index][39:32] <= s_wdata[7:0];
-                endcase
+
                 if (word_offset == 2'b00) begin
                     if (s_be[0]) data_array[index][7:0]   <= s_wdata[7:0];
                     if (s_be[1]) data_array[index][15:8]  <= s_wdata[15:8];

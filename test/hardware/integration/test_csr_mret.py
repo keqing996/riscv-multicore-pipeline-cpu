@@ -37,10 +37,10 @@ async def test_csr_mret_program(dut):
     for i in range(200):
         await RisingEdge(dut.clk)
         try:
-            pc = dut.u_core.u_backend.id_ex_program_counter.value.integer
-            mepc = dut.u_core.u_backend.u_control_status_register_file.mepc.value.integer
-            mtvec = dut.u_core.u_backend.u_control_status_register_file.mtvec.value.integer
-            x10_val = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+            pc = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
+            mepc = dut.u_tile_0.u_core.u_backend.u_control_status_register_file.mepc.value.integer
+            mtvec = dut.u_tile_0.u_core.u_backend.u_control_status_register_file.mtvec.value.integer
+            x10_val = dut.u_tile_0.u_core.u_backend.u_regfile.registers[10].value.integer
             # dut._log.info(f"Cycle {i}: PC={hex(pc)}, mepc={hex(mepc)}, mtvec={hex(mtvec)}, x10={x10_val}")
             if pc == 0x10: # EBREAK
                 break
@@ -50,7 +50,7 @@ async def test_csr_mret_program(dut):
     for _ in range(10):
         await RisingEdge(dut.clk)
 
-    x10 = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+    x10 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[10].value.integer
     assert x10 == 0xAA, f"x10 should be 0xAA, got {x10}"
 
 def test_csr_mret():

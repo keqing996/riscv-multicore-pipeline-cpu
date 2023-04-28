@@ -39,10 +39,10 @@ async def test_csr_rw_program(dut):
     # x5 should be 0xFF
     # Final mtvec should be 0xAA
     
-    x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
-    x4 = dut.u_core.u_backend.u_regfile.registers[4].value.integer
-    x5 = dut.u_core.u_backend.u_regfile.registers[5].value.integer
-    mtvec = dut.u_core.u_backend.u_control_status_register_file.mtvec.value.integer
+    x2 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[2].value.integer
+    x4 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[4].value.integer
+    x5 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[5].value.integer
+    mtvec = dut.u_tile_0.u_core.u_backend.u_control_status_register_file.mtvec.value.integer
     
     assert x2 == 0, f"x2 should be 0, got {x2}"
     assert x4 == 0xAA, f"x4 should be 0xAA, got {x4}"

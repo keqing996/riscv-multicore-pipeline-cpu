@@ -54,7 +54,7 @@ async def test_basic_ops_program(dut):
         await RisingEdge(dut.clk)
         
         try:
-            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
+            pc_ex = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 

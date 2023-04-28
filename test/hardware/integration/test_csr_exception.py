@@ -36,13 +36,13 @@ async def test_csr_exception_program(dut):
     for i in range(100):
         await RisingEdge(dut.clk)
         try:
-            pc = dut.u_core.u_backend.id_ex_program_counter.value.integer
-            mcause_val = dut.u_core.u_backend.u_control_status_register_file.mcause.value
-            csr_addr = dut.u_core.u_backend.u_control_status_register_file.csr_address.value
-            csr_rdata = dut.u_core.u_backend.u_control_status_register_file.csr_read_data.value
-            wb_we = dut.u_core.u_backend.mem_wb_register_write_enable.value
-            wb_rd = dut.u_core.u_backend.mem_wb_rd_index.value
-            wb_data = dut.u_core.u_backend.write_data_writeback.value
+            pc = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
+            mcause_val = dut.u_tile_0.u_core.u_backend.u_control_status_register_file.mcause.value
+            csr_addr = dut.u_tile_0.u_core.u_backend.u_control_status_register_file.csr_address.value
+            csr_rdata = dut.u_tile_0.u_core.u_backend.u_control_status_register_file.csr_read_data.value
+            wb_we = dut.u_tile_0.u_core.u_backend.mem_wb_register_write_enable.value
+            wb_rd = dut.u_tile_0.u_core.u_backend.mem_wb_rd_index.value
+            wb_data = dut.u_tile_0.u_core.u_backend.write_data_writeback.value
             dut._log.info(f"Cycle {i}: PC={hex(pc)}, mcause={mcause_val}, csr_addr={csr_addr}, csr_rdata={csr_rdata}, wb_we={wb_we}, wb_rd={wb_rd}, wb_data={wb_data}")
             if pc == 0x28: # EBREAK
                 break
@@ -52,8 +52,8 @@ async def test_csr_exception_program(dut):
     await RisingEdge(dut.clk) # Wait for x2 WB
     await RisingEdge(dut.clk) # Wait for x3 WB
 
-    x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
-    x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
+    x2 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[2].value.integer
+    x3 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[3].value.integer
     
     assert x2 == 11, f"mcause should be 11, got {x2}"
     assert x3 == 0x8, f"mepc should be 0x8, got {x3}"

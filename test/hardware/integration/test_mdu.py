@@ -53,7 +53,7 @@ async def test_mdu_program(dut):
     for i in range(1000):
         await RisingEdge(dut.clk)
         try:
-            pc_ex = dut.u_core.u_backend.id_ex_program_counter.value.integer
+            pc_ex = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
         except:
             pc_ex = 0
 
@@ -65,9 +65,9 @@ async def test_mdu_program(dut):
             
     # Verify State
     try:
-        x3 = dut.u_core.u_backend.u_regfile.registers[3].value.integer
-        x5 = dut.u_core.u_backend.u_regfile.registers[5].value.integer
-        x7 = dut.u_core.u_backend.u_regfile.registers[7].value.integer
+        x3 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[3].value.integer
+        x5 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[5].value.integer
+        x7 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[7].value.integer
         
         dut._log.info(f"x3 (MUL 10*5) = {x3}")
         dut._log.info(f"x5 (DIV 100/5) = {x5}")

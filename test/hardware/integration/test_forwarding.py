@@ -56,9 +56,9 @@ async def test_forwarding_program(dut):
     for i in range(200):
         await RisingEdge(dut.clk)
         try:
-            pc = dut.u_core.u_backend.id_ex_program_counter.value.integer
-            x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
-            x10 = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+            pc = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
+            x2 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[2].value.integer
+            x10 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[10].value.integer
             
             dut._log.info(f"Cycle {i}: PC={hex(pc)}, x2={x2}, x10={x10}")
             
@@ -71,11 +71,11 @@ async def test_forwarding_program(dut):
         await RisingEdge(dut.clk)
 
     # Check GPR Forwarding Result
-    x2 = dut.u_core.u_backend.u_regfile.registers[2].value.integer
+    x2 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[2].value.integer
     assert x2 == 20, f"GPR Forwarding Failed: x2 should be 20, got {x2}"
     
     # Check CSR Forwarding Result (Reached end of program)
-    x10 = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+    x10 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[10].value.integer
     assert x10 == 1, f"CSR Forwarding Failed: x10 should be 1, got {x10}"
 
 def test_forwarding():

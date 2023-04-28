@@ -47,11 +47,11 @@ async def test_csr_interrupt_program(dut):
     for i in range(500):
         await RisingEdge(dut.clk)
         try:
-            pc = dut.u_core.u_backend.id_ex_program_counter.value.integer
-            mtime = dut.u_core.u_backend.u_timer.mtime.value.integer
-            mtimecmp = dut.u_core.u_backend.u_timer.mtimecmp.value.integer
-            irq = dut.u_core.u_backend.u_timer.interrupt_request.value
-            x10_val = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+            pc = dut.u_tile_0.u_core.u_backend.id_ex_program_counter.value.integer
+            mtime = dut.u_tile_0.u_core.u_backend.u_timer.mtime.value.integer
+            mtimecmp = dut.u_tile_0.u_core.u_backend.u_timer.mtimecmp.value.integer
+            irq = dut.u_tile_0.u_core.u_backend.u_timer.interrupt_request.value
+            x10_val = dut.u_tile_0.u_core.u_backend.u_regfile.registers[10].value.integer
             
             # dut._log.info(f"Cycle {i}: PC={hex(pc)}, mtime={mtime}, irq={irq}, x10={x10_val}")
             if pc == 0x44: # EBREAK
@@ -62,7 +62,7 @@ async def test_csr_interrupt_program(dut):
     for _ in range(10):
         await RisingEdge(dut.clk)
 
-    x10 = dut.u_core.u_backend.u_regfile.registers[10].value.integer
+    x10 = dut.u_tile_0.u_core.u_backend.u_regfile.registers[10].value.integer
     assert x10 == 1, f"x10 should be 1 (Interrupt Handler Executed), got {x10}"
 
 def test_csr_interrupt():
