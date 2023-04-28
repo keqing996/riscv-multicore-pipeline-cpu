@@ -93,8 +93,20 @@ module memory_subsystem (
     assign dcache_mem_ready = dmem_ready_reg;
 
     // Memory Initialization
+    reg [1023:0] hex_file_path;
     initial begin
-        $readmemh("program.hex", u_main_memory.memory);
+        // Force first instruction to be NOP to debug
+        u_main_memory.memory[0] = 32'h00000013; 
+        
+        if ($value$plusargs("PROGRAM_HEX=%s", hex_file_path)) begin
+            $display("Loading memory from %0s...", hex_file_path);
+            $readmemh(hex_file_path, u_main_memory.memory);
+        end else begin
+            $display("Loading memory from program.hex...");
+            $readmemh("program.hex", u_main_memory.memory);
+        end
+        $display("Memory[0] = %h", u_main_memory.memory[0]);
+        $display("Memory[4] = %h", u_main_memory.memory[4]);
     end
 
 endmodule

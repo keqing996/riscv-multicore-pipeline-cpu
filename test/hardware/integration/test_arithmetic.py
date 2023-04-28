@@ -51,6 +51,7 @@ async def test_arithmetic_program(dut):
 
     dut.rst_n.value = 0
     await Timer(20, units="ns")
+    await RisingEdge(dut.clk)
     dut.rst_n.value = 1
     
     # Wait for execution

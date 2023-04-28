@@ -26,6 +26,7 @@ module main_memory (
     // Port B: Read/Write (Data)
     always @(posedge clk) begin
         if (write_enable_b) begin
+            $display("MAIN_MEMORY: Write addr=%h data=%h be=%b", address_b, write_data_b, byte_enable_b);
             if (byte_enable_b[0]) memory[address_b[15:2]][7:0]   <= write_data_b[7:0];
             if (byte_enable_b[1]) memory[address_b[15:2]][15:8]  <= write_data_b[15:8];
             if (byte_enable_b[2]) memory[address_b[15:2]][23:16] <= write_data_b[23:16];
@@ -36,6 +37,9 @@ module main_memory (
     // Port B Read - Asynchronous Read
     always @(*) begin
         read_data_b = memory[address_b[15:2]];
+        if (address_b == 32'h1000) begin
+             $display("MAIN_MEMORY: Read addr=%h data=%h", address_b, read_data_b);
+        end
     end
 
 endmodule

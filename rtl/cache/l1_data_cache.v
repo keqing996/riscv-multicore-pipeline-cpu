@@ -77,6 +77,10 @@ module l1_data_cache (
         end else begin
             state <= next_state;
             refill_buffer <= next_refill_buffer;
+            if (cpu_read_enable || cpu_write_enable || state != STATE_IDLE) begin
+                 $display("%m: state=%d, addr=%h, we=%b, re=%b, hit=%b, mem_ready=%b, mem_rdata=%h, cpu_rdata=%h", 
+                          state, cpu_address, cpu_write_enable, cpu_read_enable, hit, mem_ready, mem_read_data, cpu_read_data);
+            end
         end
     end
 

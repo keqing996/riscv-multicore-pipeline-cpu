@@ -130,31 +130,19 @@ module bus_arbiter (
                 if (effective_owner == OWNER_M0) priority_m1 <= 1;
                 if (effective_owner == OWNER_M1) priority_m1 <= 0;
             end
-        end
-    end
-
-    // todo ..
-    // Output Muxing
-    // if current_owner is NONE, use the arbitration logic immediately.
-    // If current_owner is SET, stick to it until ready.
-    reg [1:0] effective_owner;
-    
-    always @(*) begin
-        if (current_owner != OWNER_NONE) begin
-            effective_owner = current_owner;
-        end else begin
-            // Combinational Arbitration for Idle state
-            if (m0_enable && m1_enable) begin
-                effective_owner = priority_m1 ? OWNER_M1 : OWNER_M0;
-            end else if (m0_enable) begin
-                effective_owner = OWNER_M0;
-            end else if (m1_enable) begin
-                effective_owner = OWNER_M1;
-            end else begin
-                effective_owner = OWNER_NONE;
+            
+            if (m0_enable || m1_enable || bus_enable) begin
+                 $display("BusArbiter: time=%t owner=%d eff=%d addr=%h ready=%b m0_en=%b m1_en=%b", 
+                          $time, current_owner, effective_owner, bus_addr, bus_ready, m0_enable, m1_enable);
             end
         end
     end
+
+
+    // Output Muxing
+    // Use registered current_owner to avoid combinational loops.
+    // This adds 1 cycle latency for arbitration but ensures stability.
+    wire [1:0] effective_owner = current_owner;
 
     always @(*) begin
         // Defaults
