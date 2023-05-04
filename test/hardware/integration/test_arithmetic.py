@@ -2,7 +2,7 @@ import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
 from pathlib import Path
-from test.driver import run_hardware_test
+from test.driver import run_hardware_program_test
 from test.env import get_all_rtl_files
 
 
@@ -34,17 +34,11 @@ PROGRAM = [
     "00000013", # NOP
 ]
 
-def create_hex_file(filename="program.hex"):
-    with open(filename, "w") as f:
-        for instr in PROGRAM:
-            f.write(f"{instr}\n")
-
 @cocotb.test()
 async def test_arithmetic_program(dut):
     """
     Run arithmetic operations test.
     """
-    create_hex_file("program.hex")
 
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
@@ -98,8 +92,9 @@ async def test_arithmetic_program(dut):
 
 
 def test_arithmetic():
-    run_hardware_test(
+    run_hardware_program_test(
         module_name=Path(__file__).stem,
         toplevel="chip_top",
-        verilog_sources=get_all_rtl_files()
+        verilog_sources=get_all_rtl_files(),
+        program=PROGRAM
     )

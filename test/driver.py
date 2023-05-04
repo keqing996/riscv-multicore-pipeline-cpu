@@ -43,6 +43,12 @@ module dump_waves;
     initial begin
         $dumpfile("dump.vcd");
         $dumpvars(0, {toplevel});
+        
+        // Workaround: Force reset to 0 at time 0 to prevent X-propagation loops
+        // before Cocotb takes control.
+        force {toplevel}.rst_n = 0;
+        #1;
+        release {toplevel}.rst_n;
     end
 endmodule
 """
@@ -100,6 +106,35 @@ def run_hardware_test(
     if build_dir.exists():
         shutil.rmtree(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)
+
+    _internal_run_test(build_dir, module_name, verilog_sources, toplevel, **kwargs)
+
+
+def run_hardware_program_test(
+        module_name: str,
+        verilog_sources: List[Union[str, Path]],
+        toplevel: str,
+        program: List[str],
+        **kwargs: Any
+) -> None:
+    # Centralized build directory: build/<test_name>
+    build_dir = env.get_build_dir() / module_name
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+    build_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create hex program
+    hex_file = build_dir / "program.hex"
+    with open(hex_file, "w") as f:
+        for instr in program:
+            f.write(f"{instr}\n")
+
+    # Pass the hex file path to the simulator
+    plus_args = kwargs.get("plus_args", [])
+    if not isinstance(plus_args, list):
+        plus_args = [plus_args]
+    plus_args.append(f"+PROGRAM_HEX={hex_file}")
+    kwargs["plus_args"] = plus_args
 
     _internal_run_test(build_dir, module_name, verilog_sources, toplevel, **kwargs)
 
