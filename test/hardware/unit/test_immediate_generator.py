@@ -117,5 +117,6 @@ def test_immediate_generator():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="immediate_generator",
-        verilog_sources=["core/backend/immediate_generator.v"]
+        verilog_sources=["core/backend/immediate_generator.v"],
+        has_reset=False
     )

@@ -52,5 +52,6 @@ def test_branch_unit():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="branch_unit",
-        verilog_sources=["core/backend/branch_unit.v"]
+        verilog_sources=["core/backend/branch_unit.v"],
+        has_reset=False
     )

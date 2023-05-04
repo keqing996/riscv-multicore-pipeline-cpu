@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge, Timer, NextTimeStep
 from cocotb.clock import Clock
 from pathlib import Path
 from test.driver import run_hardware_test

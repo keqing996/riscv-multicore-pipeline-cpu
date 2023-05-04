@@ -36,6 +36,18 @@ def _internal_run_test(
     # Resolve RTL files, handling both absolute and relative paths
     abs_rtl_files = _internal_resolve_path(verilog_sources, env.get_rtl_dir())
 
+    has_reset = kwargs.pop("has_reset", True)
+    if has_reset:
+        reset_logic = f"""
+        // Workaround: Force reset to 0 at time 0 to prevent X-propagation loops
+        // before Cocotb takes control.
+        force {toplevel}.rst_n = 0;
+        #1;
+        release {toplevel}.rst_n;
+        """
+    else:
+        reset_logic = ""
+
     # VCD file generator
     dump_file = build_dir / f"dump_{module_name}.v"
     dump_file_content = f"""
@@ -43,12 +55,7 @@ module dump_waves;
     initial begin
         $dumpfile("dump.vcd");
         $dumpvars(0, {toplevel});
-        
-        // Workaround: Force reset to 0 at time 0 to prevent X-propagation loops
-        // before Cocotb takes control.
-        force {toplevel}.rst_n = 0;
-        #1;
-        release {toplevel}.rst_n;
+        {reset_logic}
     end
 endmodule
 """

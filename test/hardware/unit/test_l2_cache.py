@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge, Timer, ReadOnly, NextTimeStep
 from cocotb.clock import Clock
 from pathlib import Path
 from test.driver import run_hardware_test
@@ -30,11 +30,14 @@ async def test_l2_cache_basic(dut):
     dut.s_en.value = 1
     dut.s_be.value = 0b1111
     await RisingEdge(dut.clk)
+    await ReadOnly()
     
     # Should not be ready immediately (miss)
     assert dut.s_ready.value == 0, "Should not be ready on miss"
     assert dut.mem_req.value == 1, "Should request memory"
     
+    await NextTimeStep()
+
     # Simulate memory responses for cache line fill (4 words)
     for i in range(4):
         dut.mem_rdata.value = 0x10000000 + (i << 8)

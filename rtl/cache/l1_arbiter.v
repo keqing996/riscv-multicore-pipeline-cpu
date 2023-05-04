@@ -70,8 +70,7 @@ module l1_arbiter (
                     next_state = STATE_DCACHE;
                     // Pass through immediately to save a cycle? 
                     // For now, let's register the state transition to be safe and simple.
-                    // Or we can do combinational output for low latency.
-                    // Let's do combinational output for request.
+                    // Or we can do combinational output for request.
                     
                     m_addr = dcache_addr;
                     m_wdata = dcache_wdata;

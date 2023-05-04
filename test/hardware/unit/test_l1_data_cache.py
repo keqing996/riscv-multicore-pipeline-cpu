@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge, Timer, ReadOnly, NextTimeStep
 from cocotb.clock import Clock
 from pathlib import Path
 from test.driver import run_hardware_test
@@ -28,6 +28,7 @@ async def test_l1_data_cache_basic(dut):
     dut.cpu_address.value = 0x2000
     dut.cpu_read_enable.value = 1
     await RisingEdge(dut.clk)
+    await ReadOnly()
     
     dut._log.info(f"State: {dut.state.value}, Stall: {dut.stall_cpu.value}, MemReq: {dut.mem_request.value}")
 
@@ -35,6 +36,8 @@ async def test_l1_data_cache_basic(dut):
     assert dut.stall_cpu.value == 1, "Should stall on read miss"
     assert dut.mem_request.value == 1, f"Should request memory, state={dut.state.value}"
     
+    await NextTimeStep()
+
     # Simulate memory responses for cache line fill (4 words)
     for i in range(4):
         dut.mem_read_data.value = 0xAABBCC00 + i
@@ -63,11 +66,14 @@ async def test_l1_data_cache_basic(dut):
     dut.cpu_byte_enable.value = 0b1111
     dut.cpu_write_enable.value = 1
     await RisingEdge(dut.clk)
+    await ReadOnly()
     
     # Should stall and write to memory
     assert dut.stall_cpu.value == 1, "Should stall on write"
     assert dut.mem_request.value == 1, "Should request memory"
     assert dut.mem_write_enable.value == 1, "Should write"
+    
+    await NextTimeStep()
     
     dut.mem_ready.value = 1
     await RisingEdge(dut.clk)

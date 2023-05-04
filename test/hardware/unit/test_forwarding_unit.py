@@ -55,5 +55,6 @@ def test_forwarding_unit():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="forwarding_unit",
-        verilog_sources=["core/backend/forwarding_unit.v"]
+        verilog_sources=["core/backend/forwarding_unit.v"],
+        has_reset=False
     )

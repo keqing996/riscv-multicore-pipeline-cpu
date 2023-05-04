@@ -102,6 +102,7 @@ def test_alu():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="alu",
-        verilog_sources=["core/backend/alu.v"]
+        verilog_sources=["core/backend/alu.v"],
+        has_reset=False
     )
 
