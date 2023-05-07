@@ -37,5 +37,6 @@ def test_instruction_decoder():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="instruction_decoder",
-        verilog_sources=["core/backend/instruction_decoder.v"]
+        verilog_sources=["core/backend/instruction_decoder.v"],
+        has_reset=False
     )

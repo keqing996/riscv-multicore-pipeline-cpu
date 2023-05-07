@@ -43,5 +43,6 @@ def test_hazard_detection_unit():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="hazard_detection_unit",
-        verilog_sources=["core/backend/hazard_detection_unit.v"]
+        verilog_sources=["core/backend/hazard_detection_unit.v"],
+        has_reset=False
     )

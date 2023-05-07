@@ -104,5 +104,6 @@ def test_control_unit():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="control_unit",
-        verilog_sources=["core/backend/control_unit.v"]
+        verilog_sources=["core/backend/control_unit.v"],
+        has_reset=False
     )

@@ -90,5 +90,6 @@ def test_load_store_unit():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="load_store_unit",
-        verilog_sources=["core/backend/load_store_unit.v"]
+        verilog_sources=["core/backend/load_store_unit.v"],
+        has_reset=False
     )

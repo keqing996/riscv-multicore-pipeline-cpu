@@ -79,5 +79,6 @@ def test_regfile():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="regfile",
-        verilog_sources=["core/backend/regfile.v"]
+        verilog_sources=["core/backend/regfile.v"],
+        has_reset=False
     )
