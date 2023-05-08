@@ -90,6 +90,30 @@ add_verilog_test(
     LABELS "unit;backend"
 )
 
+# Test 2.4: ALU Control Unit
+add_verilog_test(
+    NAME test_alu_control_unit
+    SOURCES test_alu_control_unit.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/alu_control_unit.v
+    LABELS "unit;backend"
+)
+
+# Test 2.5: Immediate Generator
+add_verilog_test(
+    NAME test_immediate_generator
+    SOURCES test_immediate_generator.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/immediate_generator.v
+    LABELS "unit;backend"
+)
+
+# Test 2.6: Instruction Decoder
+add_verilog_test(
+    NAME test_instruction_decoder
+    SOURCES test_instruction_decoder.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/instruction_decoder.v
+    LABELS "unit;backend"
+)
+
 # ============================================================================
 # Phase 6: Core Tile Integration Test (originally hung with Cocotb!)
 # ============================================================================
