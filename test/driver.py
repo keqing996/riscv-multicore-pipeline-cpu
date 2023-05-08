@@ -31,6 +31,20 @@ def _internal_run_test(
     # Ensure PYTHONDONTWRITEBYTECODE is passed to the simulator process
     extra_env = kwargs.get("extra_env", {})
     extra_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    
+    # Add Python library path for macOS to help cocotb find libpython
+    # This fixes the "Unable to open lib" error on macOS
+    import sys
+    import sysconfig
+    python_framework = sysconfig.get_config_var('PYTHONFRAMEWORK')
+    if python_framework and sys.platform == 'darwin':
+        # Get the framework directory
+        framework_path = sysconfig.get_config_var('PYTHONFRAMEWORKPREFIX')
+        if framework_path:
+            # Add to DYLD_LIBRARY_PATH so cocotb can find Python dylib
+            existing_path = extra_env.get('DYLD_LIBRARY_PATH', '')
+            extra_env['DYLD_LIBRARY_PATH'] = f"{framework_path}/Python.framework/Versions/{sys.version_info.major}.{sys.version_info.minor}:{existing_path}"
+    
     kwargs["extra_env"] = extra_env
 
     # Resolve RTL files, handling both absolute and relative paths

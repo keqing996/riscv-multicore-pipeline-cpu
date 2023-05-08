@@ -18,17 +18,19 @@ async def load_store_unit_test(dut):
         
         await Timer(1, units="ns")
         
-        assert int(dut.data_memory_write_data.value) == exp_wdata, f"{name} WData Failed"
-        assert int(dut.data_memory_byte_enable.value) == exp_be, f"{name} BE Failed"
-        assert int(dut.data_memory_write_enable.value) == exp_we_dmem, f"{name} WE_DMEM Failed"
-        assert int(dut.uart_write_enable.value) == exp_we_uart, f"{name} WE_UART Failed"
-        assert int(dut.timer_write_enable.value) == exp_we_timer, f"{name} WE_TIMER Failed"
+        assert int(dut.bus_write_data.value) == exp_wdata, f"{name} WData Failed"
+        assert int(dut.bus_byte_enable.value) == exp_be, f"{name} BE Failed"
+        assert int(dut.bus_write_enable.value) == 1, f"{name} WE Failed"
+        assert int(dut.bus_address.value) == addr, f"{name} Address Failed"
 
     # Helper to check Load
     async def check_load(addr, rdata_dmem, rdata_timer, funct3, exp_rdata, name):
         dut.address.value = addr
-        dut.data_memory_read_data.value = rdata_dmem
-        dut.timer_read_data.value = rdata_timer
+        if addr >= 0x40000000: # Peripheral range
+             dut.bus_read_data.value = rdata_timer
+        else:
+             dut.bus_read_data.value = rdata_dmem
+             
         dut.function_3.value = funct3
         dut.memory_write_enable.value = 0
         dut.memory_read_enable.value = 1

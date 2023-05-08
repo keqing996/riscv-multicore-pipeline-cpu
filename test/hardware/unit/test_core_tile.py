@@ -1,12 +1,13 @@
 import cocotb
-from cocotb.triggers import RisingEdge, Timer, NextTimeStep
+from cocotb.triggers import RisingEdge, Timer, NextTimeStep, with_timeout
 from cocotb.clock import Clock
 from pathlib import Path
 from test.driver import run_hardware_test
-from test.env import get_all_rtl_files
+from test.env import get_rtl_dir
+import os
+import signal
 
-
-@cocotb.test()
+@cocotb.test(timeout_time=1000, timeout_unit='ms')
 async def test_core_tile_basic(dut):
     """Test core tile basic initialization and bus interface."""
     
@@ -15,6 +16,7 @@ async def test_core_tile_basic(dut):
     
     # Reset
     dut.rst_n.value = 0
+    dut.hart_id.value = 0
     dut.bus_ready.value = 0
     dut.bus_rdata.value = 0
     dut.timer_irq.value = 0
@@ -43,8 +45,18 @@ async def test_core_tile_basic(dut):
 
 
 def test_core_tile():
-    run_hardware_test(
-        module_name=Path(__file__).stem,
-        toplevel="core_tile",
-        verilog_sources=get_all_rtl_files()
-    )
+    rtl_dir = get_rtl_dir()
+    verilog_sources = list((rtl_dir / "core").rglob("*.v")) + \
+                      list((rtl_dir / "cache").rglob("*.v")) + \
+                      list((rtl_dir / "interconnect").rglob("*.v"))
+    
+    try:
+        run_hardware_test(
+            module_name=Path(__file__).stem,
+            toplevel="core_tile",
+            verilog_sources=verilog_sources,
+            has_reset=False  # Disable reset workaround to avoid early release
+        )
+    finally:
+        # Ensure any stray VVP processes are killed
+        os.system("pkill -9 -f 'vvp.*core_tile' 2>/dev/null")

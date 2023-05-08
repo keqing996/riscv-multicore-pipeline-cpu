@@ -84,5 +84,6 @@ def test_main_memory():
     run_hardware_test(
         module_name=Path(__file__).stem,
         toplevel="main_memory",
-        verilog_sources=["memory/main_memory.v"]
+        verilog_sources=["memory/main_memory.v"],
+        has_reset=False
     )

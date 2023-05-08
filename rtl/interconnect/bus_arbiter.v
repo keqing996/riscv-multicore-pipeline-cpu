@@ -40,29 +40,24 @@ module bus_arbiter (
     reg [1:0] current_owner;
     reg       priority_m1; // 0: M0 has priority, 1: M1 has priority
 
+    // Combinational Winner Logic
+    wire [1:0] winner_comb;
+    assign winner_comb = (m0_enable && m1_enable) ? (priority_m1 ? OWNER_M1 : OWNER_M0) :
+                         (m0_enable) ? OWNER_M0 :
+                         (m1_enable) ? OWNER_M1 : OWNER_NONE;
+
     // Next State Logic
     reg [1:0] next_owner;
-    reg [1:0] winner;
     
     always @(*) begin
         next_owner = current_owner;
-        winner = OWNER_NONE;
         
         case (current_owner)
             OWNER_NONE: begin
-                // Determine who would win arbitration in this cycle
-                if (m0_enable && m1_enable) begin
-                    winner = priority_m1 ? OWNER_M1 : OWNER_M0;
-                end else if (m0_enable) begin
-                    winner = OWNER_M0;
-                end else if (m1_enable) begin
-                    winner = OWNER_M1;
-                end
-                
                 // If the winner finishes immediately (ready=1), we need to decide next_owner for NEXT cycle.
-                if (bus_ready && winner != OWNER_NONE) begin
+                if (bus_ready && winner_comb != OWNER_NONE) begin
                     // If winner was M0, next preference is M1.
-                    if (winner == OWNER_M0) begin
+                    if (winner_comb == OWNER_M0) begin
                         if (m1_enable) next_owner = OWNER_M1;
                         else if (m0_enable) next_owner = OWNER_M0;
                         else next_owner = OWNER_NONE;
@@ -74,7 +69,7 @@ module bus_arbiter (
                 end else begin
                     // Winner didn't finish, or no winner.
                     // If winner exists, they become the owner.
-                    next_owner = winner;
+                    next_owner = winner_comb;
                 end
             end
             
@@ -140,9 +135,8 @@ module bus_arbiter (
 
 
     // Output Muxing
-    // Use registered current_owner to avoid combinational loops.
-    // This adds 1 cycle latency for arbitration but ensures stability.
-    wire [1:0] effective_owner = current_owner;
+    // Use combinational logic for low latency (0-cycle arbitration)
+    wire [1:0] effective_owner = (current_owner != OWNER_NONE) ? current_owner : winner_comb;
 
     always @(*) begin
         // Defaults

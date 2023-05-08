@@ -1,5 +1,3 @@
-`timescale 1ns / 1ps
-
 module core_tile (
     input wire clk,
     input wire rst_n,
@@ -22,6 +20,7 @@ module core_tile (
     wire [31:0] pc_addr;
     wire [31:0] instruction;
     wire        icache_stall;
+    reg         instruction_grant_reg;
     
     wire [31:0] core_bus_addr;
     wire [31:0] core_bus_wdata;
@@ -46,13 +45,22 @@ module core_tile (
     wire [31:0] dcache_mem_rdata;
     wire        dcache_mem_ready;
 
+    // Break combinational loop: register the instruction_grant signal
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            instruction_grant_reg <= 1'b1; // Grant initially to prevent stall loop
+        end else begin
+            instruction_grant_reg <= !icache_stall;
+        end
+    end
+
     // Core Instance
     core u_core (
         .clk(clk),
         .rst_n(rst_n),
         .hart_id(hart_id),
         .instruction(instruction),
-        .instruction_grant(!icache_stall), // Grant when I-Cache is not stalling
+        .instruction_grant(instruction_grant_reg), // Use registered signal
         .program_counter_address(pc_addr),
         
         // Data Interface (to D-Cache)
