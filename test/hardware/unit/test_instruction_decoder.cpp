@@ -51,12 +51,23 @@ public:
         TB_LOG("Test: I-Type instruction decoding");
         
         // ADDI x1, x0, 10 -> 0x00A00093
+        // I-Type doesn't use rs2 field, so we don't check it
         uint32_t inst = 0x00A00093;
-        check_decode(inst, 0b0010011, 1, 0b000, 0, 0, 0, "ADDI");
+        dut->instruction = inst;
+        eval();
+        TB_ASSERT_EQ(dut->opcode, 0b0010011, "ADDI opcode");
+        TB_ASSERT_EQ(dut->rd, 1, "ADDI rd");
+        TB_ASSERT_EQ(dut->function_3, 0b000, "ADDI funct3");
+        TB_ASSERT_EQ(dut->rs1, 0, "ADDI rs1");
         
         // LW x5, 4(x2) -> 0x00412283
         inst = 0x00412283;
-        check_decode(inst, 0b0000011, 5, 0b010, 2, 0, 0, "LW");
+        dut->instruction = inst;
+        eval();
+        TB_ASSERT_EQ(dut->opcode, 0b0000011, "LW opcode");
+        TB_ASSERT_EQ(dut->rd, 5, "LW rd");
+        TB_ASSERT_EQ(dut->function_3, 0b010, "LW funct3");
+        TB_ASSERT_EQ(dut->rs1, 2, "LW rs1");
     }
     
     void test_s_type() {
@@ -79,16 +90,24 @@ public:
         TB_LOG("Test: U-Type instruction decoding");
         
         // LUI x5, 0x12345 -> 0x123452B7
+        // U-Type only uses opcode and rd, other fields are immediate
         uint32_t inst = 0x123452B7;
-        check_decode(inst, 0b0110111, 5, 0, 0, 0, 0, "LUI");
+        dut->instruction = inst;
+        eval();
+        TB_ASSERT_EQ(dut->opcode, 0b0110111, "LUI opcode");
+        TB_ASSERT_EQ(dut->rd, 5, "LUI rd");
     }
     
     void test_j_type() {
         TB_LOG("Test: J-Type instruction decoding");
         
         // JAL x1, offset -> rd=x1, opcode=1101111
+        // J-Type only uses opcode and rd, other fields are immediate
         uint32_t inst = 0x000000EF;
-        check_decode(inst, 0b1101111, 1, 0, 0, 0, 0, "JAL");
+        dut->instruction = inst;
+        eval();
+        TB_ASSERT_EQ(dut->opcode, 0b1101111, "JAL opcode");
+        TB_ASSERT_EQ(dut->rd, 1, "JAL rd");
     }
     
     void test_random_fields() {

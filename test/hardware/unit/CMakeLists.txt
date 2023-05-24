@@ -114,6 +114,34 @@ add_verilog_test(
     LABELS "unit;backend"
 )
 
+# Test 2.7: Forwarding Unit
+add_verilog_test(
+    NAME test_forwarding_unit
+    SOURCES test_forwarding_unit.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/forwarding_unit.v
+    LABELS "unit;backend"
+)
+
+# Test 2.8: Hazard Detection Unit
+add_verilog_test(
+    NAME test_hazard_detection_unit
+    SOURCES test_hazard_detection_unit.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/hazard_detection_unit.v
+    LABELS "unit;backend"
+)
+
+# ============================================================================
+# Phase 3: Frontend Unit Tests
+# ============================================================================
+
+# Test 3.1: Program Counter
+add_verilog_test(
+    NAME test_program_counter
+    SOURCES test_program_counter.cpp
+    RTL_FILES ${RTL_DIR}/core/frontend/program_counter.v
+    LABELS "unit;frontend"
+)
+
 # ============================================================================
 # Phase 6: Core Tile Integration Test (originally hung with Cocotb!)
 # ============================================================================
