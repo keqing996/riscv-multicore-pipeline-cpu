@@ -130,6 +130,39 @@ add_verilog_test(
     LABELS "unit;backend"
 )
 
+# Test 2.9: Control Unit
+add_verilog_test(
+    NAME test_control_unit
+    SOURCES test_control_unit.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/control_unit.v
+    LABELS "unit;backend"
+)
+
+# Test 2.10: Load Store Unit
+add_verilog_test(
+    NAME test_load_store_unit
+    SOURCES test_load_store_unit.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/load_store_unit.v
+    LABELS "unit;backend"
+)
+
+# Test 2.11: CSR File
+add_verilog_test(
+    NAME test_control_status_register_file
+    SOURCES test_control_status_register_file.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/control_status_register_file.v
+    LABELS "unit;backend"
+)
+
+# Test 2.12: MDU (Multiply-Divide Unit)
+add_verilog_test(
+    NAME test_mdu_unit
+    SOURCES test_mdu_unit.cpp
+    RTL_FILES ${RTL_DIR}/core/backend/mdu.v
+    LABELS "unit;backend"
+    TOP_MODULE mdu
+)
+
 # ============================================================================
 # Phase 3: Frontend Unit Tests
 # ============================================================================
@@ -139,6 +172,14 @@ add_verilog_test(
     NAME test_program_counter
     SOURCES test_program_counter.cpp
     RTL_FILES ${RTL_DIR}/core/frontend/program_counter.v
+    LABELS "unit;frontend"
+)
+
+# Test 3.2: Branch Predictor
+add_verilog_test(
+    NAME test_branch_predictor
+    SOURCES test_branch_predictor.cpp
+    RTL_FILES ${RTL_DIR}/core/frontend/branch_predictor.v
     LABELS "unit;frontend"
 )
 
