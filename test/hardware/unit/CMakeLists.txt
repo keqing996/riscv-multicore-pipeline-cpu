@@ -184,6 +184,30 @@ add_verilog_test(
 )
 
 # ============================================================================
+# Phase 4: Interconnect Unit Tests
+# ============================================================================
+
+# Test 4.1: Bus Arbiter
+add_verilog_test(
+    NAME test_bus_arbiter
+    SOURCES test_bus_arbiter.cpp
+    RTL_FILES ${RTL_DIR}/interconnect/bus_arbiter.v
+    LABELS "unit;interconnect"
+)
+
+# ============================================================================
+# Phase 5: Peripheral Unit Tests
+# ============================================================================
+
+# Test 5.1: Timer
+add_verilog_test(
+    NAME test_timer
+    SOURCES test_timer.cpp
+    RTL_FILES ${RTL_DIR}/peripherals/timer.v
+    LABELS "unit;peripheral"
+)
+
+# ============================================================================
 # Phase 6: Core Tile Integration Test (originally hung with Cocotb!)
 # ============================================================================
 

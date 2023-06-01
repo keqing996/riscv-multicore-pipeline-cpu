@@ -79,8 +79,8 @@ public:
     void test_training_to_not_taken() {
         TB_LOG("Test: Training from taken back to not taken");
         
-        uint32_t pc = 0x300;
-        uint32_t target = 0x400;
+        uint32_t pc = 0x80;  // Index [7:2] = 0b100000 = 32 (different from 0x100=0)
+        uint32_t target = 0x180;
         
         // First get to Strongly Taken
         train_branch(pc, true, target);
@@ -99,13 +99,16 @@ public:
     void test_multiple_branches() {
         TB_LOG("Test: Multiple branch entries");
         
-        uint32_t pc1 = 0x1000;
-        uint32_t pc2 = 0x2000;
-        uint32_t target1 = 0x1100;
-        uint32_t target2 = 0x2200;
+        // Use PCs with different BTB indices (bits [7:2])
+        uint32_t pc1 = 0x110;  // Index = 0b000100 = 4
+        uint32_t pc2 = 0x120;  // Index = 0b001000 = 8
+        uint32_t target1 = 0x210;
+        uint32_t target2 = 0x220;
         
-        // Train two different branches
+        // Train two different branches (need 2 takens to reach Weakly Taken)
         train_branch(pc1, true, target1);
+        train_branch(pc1, true, target1);
+        train_branch(pc2, true, target2);
         train_branch(pc2, true, target2);
         
         // Check both are predicted correctly
