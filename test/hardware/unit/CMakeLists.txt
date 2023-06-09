@@ -208,7 +208,19 @@ add_verilog_test(
 )
 
 # ============================================================================
-# Phase 6: Core Tile Integration Test (originally hung with Cocotb!)
+# Phase 6: Memory Unit Tests
+# ============================================================================
+
+# Test 6.1: Main Memory
+add_verilog_test(
+    NAME test_main_memory
+    SOURCES test_main_memory.cpp
+    RTL_FILES ${RTL_DIR}/memory/main_memory.v
+    LABELS "unit;memory"
+)
+
+# ============================================================================
+# Phase 7: Core Tile Integration Test (originally hung with Cocotb!)
 # ============================================================================
 
 add_verilog_test(
