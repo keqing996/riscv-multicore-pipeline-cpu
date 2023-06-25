@@ -30,6 +30,7 @@ function(add_verilog_test)
             --trace              # Enable VCD tracing
             --trace-structs      # Trace struct members
             --trace-max-array 1024
+            --public             # Make internal signals accessible
             -Wall                # Enable warnings
             -Wno-fatal           # Don't make warnings fatal
             -O3                  # Optimize for speed

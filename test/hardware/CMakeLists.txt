@@ -11,3 +11,6 @@ target_include_directories(tb_common PUBLIC
 
 # Add unit tests
 add_subdirectory(unit)
+
+# Add integration tests
+add_subdirectory(integration)
