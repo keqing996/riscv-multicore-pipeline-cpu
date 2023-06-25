@@ -220,7 +220,61 @@ add_verilog_test(
 )
 
 # ============================================================================
-# Phase 7: Core Tile Integration Test (originally hung with Cocotb!)
+# Phase 7: Cache Unit Tests
+# ============================================================================
+
+# Test 7.1: L1 Arbiter
+add_verilog_test(
+    NAME test_l1_arbiter
+    SOURCES test_l1_arbiter.cpp
+    RTL_FILES ${RTL_DIR}/cache/l1_arbiter.v
+    LABELS "unit;cache"
+)
+
+# Test 7.2: L1 Instruction Cache
+add_verilog_test(
+    NAME test_l1_inst_cache
+    SOURCES test_l1_inst_cache.cpp
+    RTL_FILES ${RTL_DIR}/cache/l1_inst_cache.v
+    LABELS "unit;cache"
+)
+
+# Test 7.3: L1 Data Cache
+add_verilog_test(
+    NAME test_l1_data_cache
+    SOURCES test_l1_data_cache.cpp
+    RTL_FILES ${RTL_DIR}/cache/l1_data_cache.v
+    LABELS "unit;cache"
+)
+
+# Test 7.4: L2 Cache
+add_verilog_test(
+    NAME test_l2_cache
+    SOURCES test_l2_cache.cpp
+    RTL_FILES ${RTL_DIR}/cache/l2_cache.v
+    LABELS "unit;cache"
+)
+
+# ============================================================================
+# Phase 8: System Integration Tests
+# ============================================================================
+
+# Test 8.1: Memory Subsystem
+add_verilog_test(
+    NAME test_memory_subsystem
+    SOURCES test_memory_subsystem.cpp
+    RTL_FILES 
+        ${RTL_DIR}/system/memory_subsystem.v
+        ${RTL_DIR}/memory/main_memory.v
+        ${RTL_DIR}/cache/l1_arbiter.v
+        ${RTL_DIR}/cache/l1_inst_cache.v
+        ${RTL_DIR}/cache/l1_data_cache.v
+        ${RTL_DIR}/cache/l2_cache.v
+    LABELS "unit;system;integration"
+)
+
+# ============================================================================
+# Phase 9: Core Tile Integration Test (originally hung with Cocotb!)
 # ============================================================================
 
 add_verilog_test(
