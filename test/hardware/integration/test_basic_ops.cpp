@@ -49,8 +49,9 @@ public:
 
     void do_reset() {
         dut->rst_n = 0;
-        for (int i = 0; i < 10; i++) tick();
+        for (int i = 0; i < 20; i++) tick();  // More reset cycles
         dut->rst_n = 1;
+        for (int i = 0; i < 5; i++) tick();   // Wait a bit after reset release
     }
 };
 
@@ -74,16 +75,19 @@ int main(int argc, char** argv) {
     };
 
     // Reset and load program
+    tb.load_program(program);  // Load before reset
     tb.do_reset();
-    tb.load_program(program);
 
     // Run until EBREAK (PC = 0x18 = 24)
     int cycles = 0;
     bool ebreak_reached = false;
-    for (cycles = 0; cycles < 500; cycles++) {
+    for (cycles = 0; cycles < 5000; cycles++) {  // Increased from 500
         tb.tick();
         
         uint32_t pc_ex = tb.get_pc_ex();
+        if (cycles < 20 || cycles % 100 == 0) {  // Debug output
+            printf("[DEBUG] Cycle %d: PC_EX=0x%x\\n", cycles, pc_ex);
+        }
         if (pc_ex == 24) { // EBREAK instruction address
             printf("[TB] EBREAK Executed at cycle %d\n", cycles);
             ebreak_reached = true;
