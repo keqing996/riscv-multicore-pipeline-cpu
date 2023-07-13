@@ -5,11 +5,20 @@
 
 #include "../common/tb_base.h"
 #include <Vbackend.h>
+#include <Vbackend___024root.h>
 
 class BackendTestbench : public ClockedTestbench<Vbackend> {
 public:
     void set_clk(uint8_t value) override {
         dut->clk = value;
+    }
+
+    void do_reset() {
+        dut->rst_n = 0;
+        tick();
+        tick();
+        dut->rst_n = 1;
+        tick();
     }
 
     void setup_inputs() {
@@ -42,17 +51,17 @@ public:
         eval();
         // End of Cycle 2: ID/EX should be bubbled (reg_write=0), EX/MEM should have valid instruction
         
-        TB_ASSERT_EQ(dut->id_ex_register_write_enable, 0, "ID/EX should be bubbled (reg_write=0)");
-        TB_ASSERT_EQ(dut->ex_mem_register_write_enable, 1, "EX/MEM should have valid instruction (reg_write=1)");
-        TB_ASSERT_EQ(dut->ex_mem_rd_index, 1, "EX/MEM rd should be 1");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__id_ex_register_write_enable, 0, "ID/EX should be bubbled (reg_write=0)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__ex_mem_register_write_enable, 1, "EX/MEM should have valid instruction (reg_write=1)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__ex_mem_rd_index, 1, "EX/MEM rd should be 1");
         
         tick();
         eval();
         // End of Cycle 3: EX/MEM should now have the bubble, MEM/WB should have ADDI x1
         
-        TB_ASSERT_EQ(dut->ex_mem_register_write_enable, 0, "EX/MEM should now be bubbled");
-        TB_ASSERT_EQ(dut->mem_wb_register_write_enable, 1, "MEM/WB should have valid instruction");
-        TB_ASSERT_EQ(dut->mem_wb_rd_index, 1, "MEM/WB rd should be 1");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__ex_mem_register_write_enable, 0, "EX/MEM should now be bubbled");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__mem_wb_register_write_enable, 1, "MEM/WB should have valid instruction");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__mem_wb_rd_index, 1, "MEM/WB rd should be 1");
         
         // Release Stall
         dut->instruction_grant = 1;
@@ -60,8 +69,8 @@ public:
         eval();
         // End of Cycle 4: ADDI x2 should now be latched into ID/EX
         
-        TB_ASSERT_EQ(dut->id_ex_register_write_enable, 1, "ID/EX should have valid instruction after stall release");
-        TB_ASSERT_EQ(dut->id_ex_rd_index, 2, "ID/EX rd should be 2");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__id_ex_register_write_enable, 1, "ID/EX should have valid instruction after stall release");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__id_ex_rd_index, 2, "ID/EX rd should be 2");
     }
 
     void test_data_stall() {
@@ -90,9 +99,9 @@ public:
         eval();
         
         // Everything should be FROZEN
-        TB_ASSERT_EQ(dut->mem_wb_rd_index, 1, "MEM/WB should hold Instr 1 (rd=1)");
-        TB_ASSERT_EQ(dut->ex_mem_rd_index, 2, "EX/MEM should hold Instr 2 (rd=2)");
-        TB_ASSERT_EQ(dut->id_ex_rd_index, 3, "ID/EX should hold Instr 3 (rd=3)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__mem_wb_rd_index, 1, "MEM/WB should hold Instr 1 (rd=1)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__ex_mem_rd_index, 2, "EX/MEM should hold Instr 2 (rd=2)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__id_ex_rd_index, 3, "ID/EX should hold Instr 3 (rd=3)");
         
         // Cycle 5: Release Stall
         dut->bus_busy = 0;
@@ -100,8 +109,8 @@ public:
         eval();
         
         // Pipeline should advance
-        TB_ASSERT_EQ(dut->mem_wb_rd_index, 2, "MEM/WB should have Instr 2 (rd=2)");
-        TB_ASSERT_EQ(dut->ex_mem_rd_index, 3, "EX/MEM should have Instr 3 (rd=3)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__mem_wb_rd_index, 2, "MEM/WB should have Instr 2 (rd=2)");
+        TB_ASSERT_EQ(dut->rootp->backend__DOT__ex_mem_rd_index, 3, "EX/MEM should have Instr 3 (rd=3)");
     }
 };
 
@@ -109,15 +118,14 @@ int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     
     BackendTestbench tb;
-    tb.open_trace("dump.vcd");
-
+    
     // Test 1: Instruction Stall
-    tb.reset();
+    tb.do_reset();
     tb.setup_inputs();
     tb.test_instruction_stall();
 
     // Test 2: Data Stall
-    tb.reset();
+    tb.do_reset();
     tb.setup_inputs();
     tb.test_data_stall();
 
