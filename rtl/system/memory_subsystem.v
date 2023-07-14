@@ -37,24 +37,20 @@ module memory_subsystem (
     // Instruction Memory Latency Logic (Port A)
     reg [2:0] imem_wait_counter;
     reg imem_ready_reg;
-    reg [31:0] last_imem_addr;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             imem_wait_counter <= 0;
             imem_ready_reg <= 0;
-            last_imem_addr <= 32'hFFFFFFFF;
         end else begin
             if (icache_mem_req) begin
-                if (icache_mem_addr != last_imem_addr) begin
-                    imem_wait_counter <= 0;
-                    imem_ready_reg <= 0;
-                    last_imem_addr <= icache_mem_addr;
-                end else if (imem_wait_counter < 2) begin // 2 cycle latency
+                if (imem_wait_counter < 2) begin // 2 cycle latency
                     imem_wait_counter <= imem_wait_counter + 1;
                     imem_ready_reg <= 0;
                 end else begin
+                    // Assert ready for one cycle, then reset counter
                     imem_ready_reg <= 1;
+                    imem_wait_counter <= 0;
                 end
             end else begin
                 imem_wait_counter <= 0;
@@ -67,23 +63,19 @@ module memory_subsystem (
     // Data Memory Latency Logic (Port B)
     reg [2:0] dmem_wait_counter;
     reg dmem_ready_reg;
-    reg [31:0] last_dmem_addr;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             dmem_wait_counter <= 0;
             dmem_ready_reg <= 0;
-            last_dmem_addr <= 32'hFFFFFFFF;
         end else if (dcache_mem_req) begin
-            if (dcache_mem_addr != last_dmem_addr) begin
-                dmem_wait_counter <= 0;
-                dmem_ready_reg <= 0;
-                last_dmem_addr <= dcache_mem_addr;
-            end else if (dmem_wait_counter < 2) begin // 2 cycle latency
+            if (dmem_wait_counter < 2) begin // 2 cycle latency
                 dmem_wait_counter <= dmem_wait_counter + 1;
                 dmem_ready_reg <= 0;
             end else begin
+                // Assert ready for one cycle, then reset counter
                 dmem_ready_reg <= 1;
+                dmem_wait_counter <= 0;
             end
         end else begin
             dmem_wait_counter <= 0;
@@ -91,22 +83,5 @@ module memory_subsystem (
         end
     end
     assign dcache_mem_ready = dmem_ready_reg;
-
-    // Memory Initialization
-    reg [1023:0] hex_file_path;
-    initial begin
-        // Force first instruction to be NOP to debug
-        u_main_memory.memory[0] = 32'h00000013; 
-        
-        if ($value$plusargs("PROGRAM_HEX=%s", hex_file_path)) begin
-            $display("Loading memory from %0s...", hex_file_path);
-            $readmemh(hex_file_path, u_main_memory.memory);
-        end else begin
-            $display("Loading memory from program.hex...");
-            $readmemh("program.hex", u_main_memory.memory);
-        end
-        $display("Memory[0] = %h", u_main_memory.memory[0]);
-        $display("Memory[4] = %h", u_main_memory.memory[4]);
-    end
 
 endmodule
