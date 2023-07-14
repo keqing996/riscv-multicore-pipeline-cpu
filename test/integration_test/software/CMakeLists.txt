@@ -44,55 +44,8 @@ set(RISCV_FLAGS
     -Wall
 )
 
-# Collect all RTL files needed for chip_top
-set(CHIP_TOP_RTL_FILES
-    # System
-    ${CMAKE_SOURCE_DIR}/rtl/system/chip_top.v
-    ${CMAKE_SOURCE_DIR}/rtl/system/memory_subsystem.v
-    
-    # Core
-    ${CMAKE_SOURCE_DIR}/rtl/core/core_tile.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/core.v
-    
-    # Backend
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/backend.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/control_unit.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/regfile.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/alu.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/alu_control_unit.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/branch_unit.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/forwarding_unit.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/control_status_register_file.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/hazard_detection_unit.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/immediate_generator.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/instruction_decoder.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/load_store_unit.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/backend/mdu.v
-    
-    # Frontend
-    ${CMAKE_SOURCE_DIR}/rtl/core/frontend/frontend.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/frontend/program_counter.v
-    ${CMAKE_SOURCE_DIR}/rtl/core/frontend/branch_predictor.v
-    
-    # Cache
-    ${CMAKE_SOURCE_DIR}/rtl/cache/l1_inst_cache.v
-    ${CMAKE_SOURCE_DIR}/rtl/cache/l1_data_cache.v
-    ${CMAKE_SOURCE_DIR}/rtl/cache/l1_arbiter.v
-    ${CMAKE_SOURCE_DIR}/rtl/cache/l2_cache.v
-    
-    # Interconnect
-    ${CMAKE_SOURCE_DIR}/rtl/interconnect/bus_arbiter.v
-    ${CMAKE_SOURCE_DIR}/rtl/interconnect/bus_interconnect.v
-    
-    # Memory
-    ${CMAKE_SOURCE_DIR}/rtl/memory/main_memory.v
-    
-    # Peripherals
-    ${CMAKE_SOURCE_DIR}/rtl/peripherals/timer.v
-    ${CMAKE_SOURCE_DIR}/rtl/peripherals/uart_simulator.v
-)
-
 # Function to compile RISC-V program and create software test
+# All tests depend on shared verilated_chip_top library
 function(add_software_test TEST_NAME)
     cmake_parse_arguments(ARG "" "" "C_SOURCES" ${ARGN})
     
@@ -145,30 +98,15 @@ function(add_software_test TEST_NAME)
     # Create test executable
     add_executable(${TEST_NAME} ${TEST_NAME}.cpp)
     
-    # Verilate RTL directly into the test
-    verilate(${TEST_NAME}
-        SOURCES ${CHIP_TOP_RTL_FILES}
-        TOP_MODULE chip_top
-        PREFIX Vchip_top
-        VERILATOR_ARGS
-            --trace
-            --trace-structs
-            --trace-max-array 1024
-            --public
-            -Wall
-            -Wno-fatal
-            -O3
-            --x-assign fast
-            --x-initial fast
-            --noassert
+    # Link with shared verilated chip_top library (NO re-compilation of RTL!)
+    target_link_libraries(${TEST_NAME} PRIVATE 
+        verilated_chip_top
+        tb_common
     )
-    
-    # Link with common test utilities
-    target_link_libraries(${TEST_NAME} PRIVATE tb_common)
     
     # Include directories
     target_include_directories(${TEST_NAME} PRIVATE 
-        ${CMAKE_SOURCE_DIR}/test/hardware/common
+        ${CMAKE_SOURCE_DIR}/test/common
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_BINARY_DIR}
     )
@@ -181,14 +119,14 @@ function(add_software_test TEST_NAME)
         PROGRAM_BIN_PATH="${BIN_FILE}"
     )
     
-    # Add to CTest
-    add_test(NAME software/${TEST_NAME} 
+    # Add to CTest with hierarchical naming
+    add_test(NAME integration_test/software/${TEST_NAME} 
              COMMAND ${TEST_NAME}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     
-    set_tests_properties(software/${TEST_NAME} PROPERTIES 
+    set_tests_properties(integration_test/software/${TEST_NAME} PROPERTIES 
         TIMEOUT 120
-        LABELS "software"
+        LABELS "integration_test;integration_test.software;software"
     )
     
     message(STATUS "Added software test: ${TEST_NAME}")

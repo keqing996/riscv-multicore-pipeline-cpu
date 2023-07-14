@@ -1,3 +1,5 @@
+# Unit Tests - Each unit test compiles only the RTL it needs
+
 # Function to create a Verilator-based test
 # Modern interface: add_verilog_test(NAME <name> SOURCES <cpp> RTL_FILES <v files> TOP_MODULE <top> LABELS <labels>)
 function(add_verilog_test)
@@ -47,17 +49,19 @@ function(add_verilog_test)
         ${CMAKE_CURRENT_SOURCE_DIR}/../common
     )
     
-    # Add to CTest
-    add_test(NAME ${ARG_NAME} 
+    # Add to CTest with hierarchical naming
+    add_test(NAME unit_test/${ARG_NAME} 
              COMMAND ${ARG_NAME}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     
     # Set test properties
-    set_tests_properties(${ARG_NAME} PROPERTIES TIMEOUT 60)
+    set_tests_properties(unit_test/${ARG_NAME} PROPERTIES TIMEOUT 60)
     
-    # Add labels if specified
+    # Add labels if specified (including hierarchical labels)
     if(ARG_LABELS)
-        set_tests_properties(${ARG_NAME} PROPERTIES LABELS "${ARG_LABELS}")
+        set_tests_properties(unit_test/${ARG_NAME} PROPERTIES LABELS "unit_test;${ARG_LABELS}")
+    else()
+        set_tests_properties(unit_test/${ARG_NAME} PROPERTIES LABELS "unit_test")
     endif()
     
     message(STATUS "Added test: ${ARG_NAME} (top=${ARG_TOP_MODULE})")
