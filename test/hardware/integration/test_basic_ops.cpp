@@ -47,6 +47,54 @@ public:
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__id_ex_program_counter;
     }
 
+    uint32_t get_pc_if() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__program_counter_current;
+    }
+
+    uint8_t get_icache_state() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_icache__DOT__state;
+    }
+
+    bool get_icache_stall() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__icache_stall;
+    }
+
+    bool get_instruction_grant() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__instruction_grant_reg;
+    }
+    
+    uint32_t get_pc_id() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__if_id_program_counter;
+    }
+    
+    uint32_t get_instruction_id() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__if_id_instruction;
+    }
+    
+    bool get_stall_backend() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__stall_pipeline;
+    }
+    
+    bool get_flush_branch() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__flush_due_to_branch;
+    }
+    
+    bool get_flush_jump() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__flush_due_to_jump;
+    }
+    
+    bool get_flush_trap() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__flush_due_to_trap;
+    }
+    
+    uint32_t get_icache_instruction() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__instruction;
+    }
+    
+    bool get_stall_global() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__stall_global;
+    }
+
     void do_reset() {
         dut->rst_n = 0;
         for (int i = 0; i < 20; i++) tick();  // More reset cycles
@@ -85,8 +133,22 @@ int main(int argc, char** argv) {
         tb.tick();
         
         uint32_t pc_ex = tb.get_pc_ex();
-        if (cycles < 20 || cycles % 100 == 0) {  // Debug output
-            printf("[DEBUG] Cycle %d: PC_EX=0x%x\\n", cycles, pc_ex);
+        uint32_t pc_if = tb.get_pc_if();
+        uint32_t pc_id = tb.get_pc_id();
+        uint32_t inst_id = tb.get_instruction_id();
+        uint8_t icache_state = tb.get_icache_state();
+        bool icache_stall = tb.get_icache_stall();
+        bool inst_grant = tb.get_instruction_grant();
+        bool stall_back = tb.get_stall_backend();
+        bool flush_br = tb.get_flush_branch();
+        bool flush_jp = tb.get_flush_jump();
+        bool flush_tr = tb.get_flush_trap();
+        uint32_t icache_inst = tb.get_icache_instruction();
+        bool stall_glob = tb.get_stall_global();
+        
+        if (cycles < 30 || cycles % 100 == 0) {  // More debug output
+            printf("[DEBUG] Cycle %d: PC_IF=0x%x PC_ID=0x%x(0x%x) PC_EX=0x%x grant=%d stall_g=%d icache_inst=0x%x\n", 
+                   cycles, pc_if, pc_id, inst_id, pc_ex, inst_grant, stall_glob, icache_inst);
         }
         if (pc_ex == 24) { // EBREAK instruction address
             printf("[TB] EBREAK Executed at cycle %d\n", cycles);

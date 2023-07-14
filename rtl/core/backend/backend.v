@@ -277,7 +277,7 @@ module backend (
             id_ex_is_mdu_operation <= 0; // Reset
         end else if (stall_mem_stage || mdu_stall) begin // Stall if MDU is busy/not ready
             // Stall ID/EX (Hold value)
-        end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard || (stall_fetch_stage && !(is_environment_call_decode || is_machine_return_decode))) begin
+        end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard) begin
             // Flush ID/EX (Insert Bubble)
             is_branch_execute <= 0;
             is_jump_execute <= 0;

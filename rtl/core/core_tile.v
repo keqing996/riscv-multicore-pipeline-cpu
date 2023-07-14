@@ -48,7 +48,7 @@ module core_tile (
     // Break combinational loop: register the instruction_grant signal
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            instruction_grant_reg <= 1'b1; // Grant initially to prevent stall loop
+            instruction_grant_reg <= 1'b0; // Start with no grant, will update after reset
         end else begin
             instruction_grant_reg <= !icache_stall;
         end
