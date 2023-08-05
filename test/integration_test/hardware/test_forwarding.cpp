@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: Forwarding Integration Test
 // Tests both GPR and CSR forwarding paths:
 // - GPR Forwarding (EX->EX): ADDI x1=10, ADD x2=x1+x1 (x2=20)
@@ -16,7 +18,6 @@
 // 0x80: ADDI x10, x0, 1      (Success marker)
 // 0x84: EBREAK
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -54,10 +55,8 @@ public:
 
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Forwarding") {
+ChipTopTestbench tb;
 
     // Initialize program with NOPs
     std::vector<uint32_t> program(256, 0x00000013); // 256 NOPs
@@ -94,15 +93,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Check GPR Forwarding Result
     uint32_t x2 = tb.read_register(2);
-    TB_ASSERT_EQ(x2, 20, "GPR Forwarding: x2 should be 20");
+    CHECK(x2 == 20);
 
     // Check CSR Forwarding Result (Reached end of program)
     uint32_t x10 = tb.read_register(10);
-    TB_ASSERT_EQ(x10, 1, "CSR Forwarding: x10 should be 1");
-
-    return 0;
+    CHECK(x10 == 1);
 }

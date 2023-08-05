@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: Memory Operations Integration Test
 // Tests byte/halfword/word load and store operations:
 // - LUI x1, 1          (x1 = 0x1000)
@@ -14,7 +16,6 @@
 // - LBU x8, 0(x1)      (x8 = 0x000000AB)
 // - EBREAK
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -52,10 +53,8 @@ public:
 
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Memory Ops") {
+ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
         0x000010b7, // LUI x1, 1
@@ -91,16 +90,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify Register Values
     uint32_t x6 = tb.read_register(6);
     uint32_t x7 = tb.read_register(7);
     uint32_t x8 = tb.read_register(8);
 
-    TB_ASSERT_EQ(x6, 0x12EFCDAB, "x6 should be 0x12EFCDAB (LW)");
-    TB_ASSERT_EQ(x7, 0xFFFFFFAB, "x7 should be 0xFFFFFFAB (LB sign-extended)");
-    TB_ASSERT_EQ(x8, 0x000000AB, "x8 should be 0x000000AB (LBU zero-extended)");
-
-    return 0;
+    CHECK(x6 == 0x12EFCDAB);
+    CHECK(x7 == 0xFFFFFFAB);
+    CHECK(x8 == 0x000000AB);
 }

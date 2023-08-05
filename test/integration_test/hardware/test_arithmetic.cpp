@@ -1,18 +1,9 @@
 // Test: Arithmetic Operations Integration Test
-// Runs arithmetic operations on the full chip:
-// - ADDI x1, x0, 10  (x1 = 10)
-// - ADDI x2, x0, 5   (x2 = 5)
-// - ADD x3, x1, x2   (x3 = 15)
-// - SUB x4, x1, x2   (x4 = 5)
-// - AND x5, x1, x2   (x5 = 0)
-// - OR x6, x1, x2    (x6 = 15)
-// - XOR x7, x1, x2   (x7 = 15)
-// - SLL x8, x1, x2   (x8 = 320)
-// - SRL x9, x1, x2   (x9 = 0)
-// - SLT x10, x2, x1  (x10 = 1)
-// - EBREAK           (Stop)
+// Runs arithmetic operations on the full chip
 
-#include "../common/tb_base.h"
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
+#include "tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -49,9 +40,7 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
+TEST_CASE("Arithmetic Operations Integration Test") {
     ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
@@ -86,19 +75,17 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify Register Values
-    TB_ASSERT_EQ(tb.read_register(1), 10, "x1 should be 10");
-    TB_ASSERT_EQ(tb.read_register(2), 5, "x2 should be 5");
-    TB_ASSERT_EQ(tb.read_register(3), 15, "x3 should be 15");
-    TB_ASSERT_EQ(tb.read_register(4), 5, "x4 should be 5");
-    TB_ASSERT_EQ(tb.read_register(5), 0, "x5 should be 0");
-    TB_ASSERT_EQ(tb.read_register(6), 15, "x6 should be 15");
-    TB_ASSERT_EQ(tb.read_register(7), 15, "x7 should be 15");
-    TB_ASSERT_EQ(tb.read_register(8), 320, "x8 should be 320");
-    TB_ASSERT_EQ(tb.read_register(9), 0, "x9 should be 0");
-    TB_ASSERT_EQ(tb.read_register(10), 1, "x10 should be 1");
-
-    return 0;
+    CHECK(tb.read_register(1) == 10);
+    CHECK(tb.read_register(2) == 5);
+    CHECK(tb.read_register(3) == 15);
+    CHECK(tb.read_register(4) == 5);
+    CHECK(tb.read_register(5) == 0);
+    CHECK(tb.read_register(6) == 15);
+    CHECK(tb.read_register(7) == 15);
+    CHECK(tb.read_register(8) == 320);
+    CHECK(tb.read_register(9) == 0);
+    CHECK(tb.read_register(10) == 1);
 }

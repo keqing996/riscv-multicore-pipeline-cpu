@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vinstruction_decoder.h"
 #include <random>
@@ -12,8 +14,7 @@ private:
     std::mt19937 rng;
     
 public:
-    DecoderTestbench() : TestbenchBase<Vinstruction_decoder>(true, "decoder_trace.vcd"), rng(12345) {
-        TB_LOG("Instruction Decoder Testbench initialized");
+    DecoderTestbench() : TestbenchBase<Vinstruction_decoder>(false), rng(12345) {
     }
     
     void check_decode(uint32_t inst, uint8_t exp_opcode, uint8_t exp_rd, uint8_t exp_funct3,
@@ -22,16 +23,15 @@ public:
         eval();
         
         std::string prefix(name);
-        TB_ASSERT_EQ(dut->opcode, exp_opcode, (prefix + " opcode").c_str());
-        TB_ASSERT_EQ(dut->rd, exp_rd, (prefix + " rd").c_str());
-        TB_ASSERT_EQ(dut->function_3, exp_funct3, (prefix + " funct3").c_str());
-        TB_ASSERT_EQ(dut->rs1, exp_rs1, (prefix + " rs1").c_str());
-        TB_ASSERT_EQ(dut->rs2, exp_rs2, (prefix + " rs2").c_str());
-        TB_ASSERT_EQ(dut->function_7, exp_funct7, (prefix + " funct7").c_str());
+        CHECK(dut->opcode, exp_opcode, (prefix + " opcode" ==).c_str());
+        CHECK(dut->rd, exp_rd, (prefix + " rd" ==).c_str());
+        CHECK(dut->function_3, exp_funct3, (prefix + " funct3" ==).c_str());
+        CHECK(dut->rs1, exp_rs1, (prefix + " rs1" ==).c_str());
+        CHECK(dut->rs2, exp_rs2, (prefix + " rs2" ==).c_str());
+        CHECK(dut->function_7, exp_funct7, (prefix + " funct7" ==).c_str());
     }
     
     void test_r_type() {
-        TB_LOG("Test: R-Type instruction decoding");
         
         // ADD x3, x1, x2 -> 0x002081B3
         // funct7=0000000, rs2=x2, rs1=x1, funct3=000, rd=x3, opcode=0110011
@@ -48,30 +48,28 @@ public:
     }
     
     void test_i_type() {
-        TB_LOG("Test: I-Type instruction decoding");
         
         // ADDI x1, x0, 10 -> 0x00A00093
         // I-Type doesn't use rs2 field, so we don't check it
         uint32_t inst = 0x00A00093;
         dut->instruction = inst;
         eval();
-        TB_ASSERT_EQ(dut->opcode, 0b0010011, "ADDI opcode");
-        TB_ASSERT_EQ(dut->rd, 1, "ADDI rd");
-        TB_ASSERT_EQ(dut->function_3, 0b000, "ADDI funct3");
-        TB_ASSERT_EQ(dut->rs1, 0, "ADDI rs1");
+        CHECK(dut->opcode == 0b0010011);
+        CHECK(dut->rd == 1);
+        CHECK(dut->function_3 == 0b000);
+        CHECK(dut->rs1 == 0);
         
         // LW x5, 4(x2) -> 0x00412283
         inst = 0x00412283;
         dut->instruction = inst;
         eval();
-        TB_ASSERT_EQ(dut->opcode, 0b0000011, "LW opcode");
-        TB_ASSERT_EQ(dut->rd, 5, "LW rd");
-        TB_ASSERT_EQ(dut->function_3, 0b010, "LW funct3");
-        TB_ASSERT_EQ(dut->rs1, 2, "LW rs1");
+        CHECK(dut->opcode == 0b0000011);
+        CHECK(dut->rd == 5);
+        CHECK(dut->function_3 == 0b010);
+        CHECK(dut->rs1 == 2);
     }
     
     void test_s_type() {
-        TB_LOG("Test: S-Type instruction decoding");
         
         // SW x5, 4(x2) -> 0x00512223
         uint32_t inst = 0x00512223;
@@ -79,7 +77,6 @@ public:
     }
     
     void test_b_type() {
-        TB_LOG("Test: B-Type instruction decoding");
         
         // BEQ x1, x2, offset -> rs1=x1, rs2=x2, funct3=000, opcode=1100011
         uint32_t inst = 0x00208063;
@@ -87,31 +84,28 @@ public:
     }
     
     void test_u_type() {
-        TB_LOG("Test: U-Type instruction decoding");
         
         // LUI x5, 0x12345 -> 0x123452B7
         // U-Type only uses opcode and rd, other fields are immediate
         uint32_t inst = 0x123452B7;
         dut->instruction = inst;
         eval();
-        TB_ASSERT_EQ(dut->opcode, 0b0110111, "LUI opcode");
-        TB_ASSERT_EQ(dut->rd, 5, "LUI rd");
+        CHECK(dut->opcode == 0b0110111);
+        CHECK(dut->rd == 5);
     }
     
     void test_j_type() {
-        TB_LOG("Test: J-Type instruction decoding");
         
         // JAL x1, offset -> rd=x1, opcode=1101111
         // J-Type only uses opcode and rd, other fields are immediate
         uint32_t inst = 0x000000EF;
         dut->instruction = inst;
         eval();
-        TB_ASSERT_EQ(dut->opcode, 0b1101111, "JAL opcode");
-        TB_ASSERT_EQ(dut->rd, 1, "JAL rd");
+        CHECK(dut->opcode == 0b1101111);
+        CHECK(dut->rd == 1);
     }
     
     void test_random_fields() {
-        TB_LOG("Test: Random field extraction");
         
         for (int i = 0; i < 50; i++) {
             uint8_t opcode = rng() % 128;
@@ -129,11 +123,8 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        DecoderTestbench tb;
+TEST_CASE("Instruction Decoder") {
+DecoderTestbench tb;
         
         tb.test_r_type();
         tb.test_i_type();
@@ -142,12 +133,4 @@ int main(int argc, char** argv) {
         tb.test_u_type();
         tb.test_j_type();
         tb.test_random_fields();
-        
-        TB_LOG("All Instruction Decoder tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

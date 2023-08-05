@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vtimer.h"
 #include <string>
@@ -9,7 +11,7 @@ public:
     static constexpr uint32_t MTIMECMP_L = 0x40004008;
     static constexpr uint32_t MTIMECMP_H = 0x4000400C;
     
-    TimerTestbench() : ClockedTestbench<Vtimer>(100, true, "timer_trace.vcd") {
+    TimerTestbench() : ClockedTestbench<Vtimer>(100, false) {
         // Initialize inputs
         dut->write_enable = 0;
         dut->address = 0;
@@ -25,7 +27,6 @@ public:
         tick();
         dut->rst_n = 1;
         tick();
-        TB_LOG("Reset complete");
     }
     
     uint32_t read_reg(uint32_t addr) {
@@ -43,7 +44,6 @@ public:
     }
     
     void test_initial_state() {
-        TB_LOG("Test: Initial state");
         
         // Give time for reset values to settle
         tick();
@@ -63,18 +63,16 @@ public:
         // mtimecmp should be max (but Verilator might need explicit initialization)
         // Skip this check if implementation uses X-initialization
         if (mtimecmp_l_raw != 0xFFFFFFFF) {
-            TB_LOG("WARNING: mtimecmp not initialized to max, manually setting");
             write_reg(MTIMECMP_L, 0xFFFFFFFF);
             write_reg(MTIMECMP_H, 0xFFFFFFFF);
-            TB_ASSERT_EQ(read_reg(MTIMECMP_L), 0xFFFFFFFF, "mtimecmp_l after manual init");
+            CHECK(read_reg(MTIMECMP_L) == 0xFFFFFFFF);
         }
         
         // Interrupt should be low
-        TB_ASSERT_EQ(dut->interrupt_request, 0, "Initial interrupt");
+        CHECK(dut->interrupt_request == 0);
     }
     
     void test_interrupt_trigger() {
-        TB_LOG("Test: Interrupt trigger");
         
         // Read current time
         uint32_t current_time = read_reg(MTIME_L);
@@ -90,7 +88,6 @@ public:
             tick();
             if (dut->interrupt_request == 1) {
                 interrupt_fired = true;
-                TB_LOG("Interrupt fired after waiting");
                 break;
             }
         }
@@ -102,35 +99,23 @@ public:
     }
     
     void test_interrupt_clear() {
-        TB_LOG("Test: Clear interrupt");
         
         // Interrupt should still be asserted from previous test
-        TB_ASSERT_EQ(dut->interrupt_request, 1, "Interrupt before clear");
+        CHECK(dut->interrupt_request == 1);
         
         // Clear by setting mtimecmp to max
         write_reg(MTIMECMP_L, 0xFFFFFFFF);
         eval();
         
-        TB_ASSERT_EQ(dut->interrupt_request, 0, "Interrupt after clear");
+        CHECK(dut->interrupt_request == 0);
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        TimerTestbench tb;
+TEST_CASE("Timer") {
+TimerTestbench tb;
         
         tb.reset();
         tb.test_initial_state();
         tb.test_interrupt_trigger();
         tb.test_interrupt_clear();
-        
-        TB_LOG("All Timer tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

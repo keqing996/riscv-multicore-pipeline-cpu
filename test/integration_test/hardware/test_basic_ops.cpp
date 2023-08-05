@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: Basic Operations Integration Test
 // Runs a simple assembly program on the full chip:
 // - ADDI x1, x0, 10  (x1 = 10)
@@ -8,7 +10,6 @@
 // - LW x4, 0(x5)     (x4 = 30)
 // - EBREAK           (Stop)
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>  // For internal signals
 #include <fstream>
@@ -103,10 +104,8 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Basic Ops") {
+ChipTopTestbench tb;
 
     // Machine Code Program
     std::vector<uint32_t> program = {
@@ -147,11 +146,13 @@ int main(int argc, char** argv) {
         bool stall_glob = tb.get_stall_global();
         
         if (cycles < 30 || cycles % 100 == 0) {  // More debug output
-            printf("[DEBUG] Cycle %d: PC_IF=0x%x PC_ID=0x%x(0x%x) PC_EX=0x%x grant=%d stall_g=%d icache_inst=0x%x\n", 
+            printf("[DEBUG] Cycle %d: PC_IF=0x%x PC_ID=0x%x(0x%x) PC_EX=0x%x grant=%d stall_g=%d icache_inst=0x%x
+", 
                    cycles, pc_if, pc_id, inst_id, pc_ex, inst_grant, stall_glob, icache_inst);
         }
         if (pc_ex == 24) { // EBREAK instruction address
-            printf("[TB] EBREAK Executed at cycle %d\n", cycles);
+            printf("[TB] EBREAK Executed at cycle %d
+", cycles);
             ebreak_reached = true;
             // Wait for pipeline to flush
             for (int i = 0; i < 10; i++) {
@@ -161,7 +162,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify Register Values
     uint32_t x1 = tb.read_register(1);
@@ -170,19 +171,18 @@ int main(int argc, char** argv) {
     uint32_t x4 = tb.read_register(4);
     uint32_t x5 = tb.read_register(5);
 
-    printf("[TB] x1=%u, x2=%u, x3=%u, x4=%u, x5=0x%x\n", x1, x2, x3, x4, x5);
+    printf("[TB] x1=%u, x2=%u, x3=%u, x4=%u, x5=0x%x
+", x1, x2, x3, x4, x5);
 
-    TB_ASSERT_EQ(x1, 10, "x1 should be 10");
-    TB_ASSERT_EQ(x2, 20, "x2 should be 20");
-    TB_ASSERT_EQ(x3, 30, "x3 should be 30");
-    TB_ASSERT_EQ(x4, 30, "x4 should be 30");
-    TB_ASSERT_EQ(x5, 0x1000, "x5 should be 0x1000");
+    CHECK(x1 == 10);
+    CHECK(x2 == 20);
+    CHECK(x3 == 30);
+    CHECK(x4 == 30);
+    CHECK(x5 == 0x1000);
 
     // Verify Memory Content
     uint32_t mem_val = tb.read_memory_word(0x1000);
-    printf("[TB] Memory[0x1000] = %u\n", mem_val);
-    TB_ASSERT_EQ(mem_val, 30, "Memory[0x1000] should be 30");
-
-    TB_LOG("Test PASSED");
-    return 0;
+    printf("[TB] Memory[0x1000] = %u
+", mem_val);
+    CHECK(mem_val == 30);
 }

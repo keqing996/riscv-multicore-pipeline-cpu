@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Valu_control_unit.h"
 #include <sstream>
@@ -21,8 +23,7 @@
  */
 class ALUControlTestbench : public TestbenchBase<Valu_control_unit> {
 public:
-    ALUControlTestbench() : TestbenchBase<Valu_control_unit>(true, "alu_control_unit_trace.vcd") {
-        TB_LOG("ALU Control Unit Testbench initialized");
+    ALUControlTestbench() : TestbenchBase<Valu_control_unit>(false) {
     }
     
     void check(uint8_t alu_op, uint8_t funct3, uint8_t funct7, uint8_t expected_ctrl, const char* name) {
@@ -35,17 +36,15 @@ public:
         if (got != expected_ctrl) {
             std::stringstream ss;
             ss << name << " - Op=" << (int)alu_op << " F3=" << (int)funct3 << " F7=" << (int)funct7;
-            TB_ASSERT_EQ(got, expected_ctrl, ss.str().c_str());
+            CHECK(got, expected_ctrl, ss.str( ==).c_str());
         }
     }
     
     void test_load_store_auipc() {
-        TB_LOG("Test: Load/Store/AUIPC operations");
         check(0b000, 0, 0, ALU_ADD, "LW/SW/AUIPC");
     }
     
     void test_branch_operations() {
-        TB_LOG("Test: Branch operations");
         check(0b001, 0b000, 0, ALU_SUB, "BEQ");
         check(0b001, 0b001, 0, ALU_SUB, "BNE");
         check(0b001, 0b100, 0, ALU_SLT, "BLT");
@@ -55,7 +54,6 @@ public:
     }
     
     void test_r_type() {
-        TB_LOG("Test: R-Type instructions");
         check(0b010, 0b000, 0b0000000, ALU_ADD, "ADD");
         check(0b010, 0b000, 0b0100000, ALU_SUB, "SUB");
         check(0b010, 0b001, 0, ALU_SLL, "SLL");
@@ -69,7 +67,6 @@ public:
     }
     
     void test_i_type() {
-        TB_LOG("Test: I-Type instructions");
         check(0b011, 0b000, 0, ALU_ADD, "ADDI");
         check(0b011, 0b001, 0, ALU_SLL, "SLLI");
         check(0b011, 0b010, 0, ALU_SLT, "SLTI");
@@ -82,28 +79,16 @@ public:
     }
     
     void test_lui() {
-        TB_LOG("Test: LUI instruction");
         check(0b100, 0, 0, ALU_LUI, "LUI");
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        ALUControlTestbench tb;
+TEST_CASE("Alu Control Unit") {
+ALUControlTestbench tb;
         
         tb.test_load_store_auipc();
         tb.test_branch_operations();
         tb.test_r_type();
         tb.test_i_type();
         tb.test_lui();
-        
-        TB_LOG("All ALU Control Unit tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

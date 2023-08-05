@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: CSR MRET (Machine Return)
 // Tests MRET instruction for returning from exception handler:
 // - Setup mtvec to 0x20
@@ -16,7 +18,6 @@
 // 0x28: CSRRW x0, mepc, x5
 // 0x2C: MRET
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -54,10 +55,8 @@ public:
 
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Csr Mret") {
+ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
         0x02000093, // 0x00: ADDI x1, x0, 0x20
@@ -90,11 +89,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify that x10 was NOT set (instruction was skipped)
     uint32_t x10 = tb.read_register(10);
-    TB_ASSERT_EQ(x10, 0xAA, "x10 should be 0xAA (MRET returned to correct address)");
-
-    return 0;
+    CHECK(x10 == 0xAA);
 }

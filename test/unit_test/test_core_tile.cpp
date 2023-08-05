@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vcore_tile.h"
 #include <iostream>
@@ -15,7 +17,7 @@ private:
     uint64_t cycle_count;
     
 public:
-    CoreTileTestbench() : ClockedTestbench<Vcore_tile>(100, true, "core_tile_trace.vcd"), cycle_count(0) {
+    CoreTileTestbench() : ClockedTestbench<Vcore_tile>(100, false), cycle_count(0) {
         // Initialize inputs
         dut->rst_n = 0;
         dut->hart_id = 0;
@@ -23,7 +25,6 @@ public:
         dut->bus_rdata = 0;
         dut->timer_irq = 0;
         
-        TB_LOG("Core Tile Testbench initialized");
     }
     
     void set_clk(uint8_t value) override {
@@ -40,7 +41,6 @@ public:
             tick();
         }
         dut->rst_n = 1;
-        TB_LOG("Reset complete");
     }
     
     // Handle bus transactions (simulate memory)
@@ -84,7 +84,6 @@ public:
         for (size_t i = 0; i < program.size(); i++) {
             memory[base_addr + i * 4] = program[i];
         }
-        TB_INFO("Loaded program: " << program.size() << " instructions at 0x" << std::hex << base_addr);
     }
     
     // Run for N cycles
@@ -97,19 +96,16 @@ public:
     
     // Test: Basic initialization (should not hang!)
     void test_initialization() {
-        TB_LOG("Test: Core Tile initialization (no hang)");
         
         reset();
         
         // Run for 50 cycles - should not hang!
         run_cycles(50);
         
-        TB_LOG("SUCCESS: Core ran for 50 cycles without hanging");
     }
     
     // Test: Execute NOP instructions
     void test_nop_execution() {
-        TB_LOG("Test: NOP instruction execution");
         
         // Load program with NOPs
         std::vector<uint32_t> program = {
@@ -123,12 +119,10 @@ public:
         reset();
         run_cycles(100);
         
-        TB_LOG("NOP execution test PASSED");
     }
     
     // Test: Simple arithmetic
     void test_simple_arithmetic() {
-        TB_LOG("Test: Simple arithmetic instructions");
         
         // addi x1, x0, 10    # x1 = 10
         // addi x2, x0, 20    # x2 = 20  
@@ -144,7 +138,6 @@ public:
         reset();
         run_cycles(200);  // Give enough time for pipelined execution
         
-        TB_LOG("Arithmetic test completed");
     }
     
     uint64_t get_cycle_count() const {
@@ -152,32 +145,11 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        CoreTileTestbench tb;
+TEST_CASE("Core Tile") {
+CoreTileTestbench tb;
         
-        TB_LOG("========================================");
-        TB_LOG("Core Tile Test Suite");
-        TB_LOG("This was the test that hung with Cocotb!");
-        TB_LOG("========================================");
         
         tb.test_initialization();
         tb.test_nop_execution();
         tb.test_simple_arithmetic();
-        
-        TB_LOG("");
-        TB_LOG("========================================");
-        TB_LOG("All Core Tile tests PASSED!");
-        TB_LOG("Total cycles: " << tb.get_cycle_count());
-        TB_LOG("No hang! Verilator wins!");
-        TB_LOG("========================================");
-        
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

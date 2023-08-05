@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vbranch_unit.h"
 #include <iostream>
@@ -12,8 +14,7 @@ const uint8_t FUNCT3_BGEU = 0b111;
 
 class BranchUnitTestbench : public TestbenchBase<Vbranch_unit> {
 public:
-    BranchUnitTestbench() : TestbenchBase<Vbranch_unit>(true, "branch_unit_trace.vcd") {
-        TB_LOG("Branch Unit Testbench initialized");
+    BranchUnitTestbench() : TestbenchBase<Vbranch_unit>(false) {
     }
     
     void test_branch(uint8_t funct3, uint32_t a, uint32_t b, bool expected, const char* name) {
@@ -31,7 +32,6 @@ public:
     }
     
     void run_all_tests() {
-        TB_LOG("Running Branch Unit tests...");
         
         // BEQ tests
         test_branch(FUNCT3_BEQ, 10, 10, true, "BEQ");
@@ -59,23 +59,10 @@ public:
         test_branch(FUNCT3_BGEU, 10, 5, true, "BGEU");
         test_branch(FUNCT3_BGEU, 0xFFFFFFFF, 1, true, "BGEU");
         
-        TB_LOG("All Branch Unit tests PASSED");
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        BranchUnitTestbench tb;
+TEST_CASE("Branch Unit") {
+BranchUnitTestbench tb;
         tb.run_all_tests();
-        
-        TB_LOG("==================================" );
-        TB_LOG("All Branch Unit tests PASSED!");
-        TB_LOG("==================================");
-        return 0;
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

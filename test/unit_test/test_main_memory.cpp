@@ -1,10 +1,12 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vmain_memory.h"
 #include <string>
 
 class MainMemoryTestbench : public ClockedTestbench<Vmain_memory> {
 public:
-    MainMemoryTestbench() : ClockedTestbench<Vmain_memory>(100, true, "main_memory_trace.vcd") {
+    MainMemoryTestbench() : ClockedTestbench<Vmain_memory>(100, false) {
         // Initialize inputs
         dut->address_a = 0;
         dut->address_b = 0;
@@ -50,7 +52,6 @@ public:
     }
     
     void test_word_readwrite() {
-        TB_LOG("Test: Word read/write");
         
         uint32_t addr = 0x100;
         uint32_t data = 0xDEADBEEF;
@@ -64,14 +65,13 @@ public:
         // Read via port B
         uint32_t read_b = read_port_b(addr);
         printf("[DEBUG] After write: addr=0x%x, read_b=0x%x, expected=0x%x\n", addr, read_b, data);
-        TB_ASSERT_EQ(read_b, data, "Port B read");
+        CHECK(read_b == data);
         
         // Read via port A
-        TB_ASSERT_EQ(read_port_a(addr), data, "Port A read");
+        CHECK(read_port_a(addr) == data);
     }
     
     void test_byte_writes() {
-        TB_LOG("Test: Byte-granular writes");
         
         uint32_t addr = 0x200;
         
@@ -83,11 +83,10 @@ public:
         
         // Read full word
         uint32_t result = read_port_b(addr);
-        TB_ASSERT_EQ(result, 0xDDCCBBAA, "Byte write composition");
+        CHECK(result == 0xDDCCBBAA);
     }
     
     void test_dual_port() {
-        TB_LOG("Test: Dual port simultaneous access");
         
         uint32_t addr1 = 0x300;
         uint32_t addr2 = 0x400;
@@ -103,26 +102,15 @@ public:
         dut->address_b = addr2;
         eval();
         
-        TB_ASSERT_EQ(dut->read_data_a, data1, "Dual port: A reads addr1");
-        TB_ASSERT_EQ(dut->read_data_b, data2, "Dual port: B reads addr2");
+        CHECK(dut->read_data_a == data1);
+        CHECK(dut->read_data_b == data2);
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        MainMemoryTestbench tb;
+TEST_CASE("Main Memory") {
+MainMemoryTestbench tb;
         
         tb.test_word_readwrite();
         tb.test_byte_writes();
         tb.test_dual_port();
-        
-        TB_LOG("All Main Memory tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

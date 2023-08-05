@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vimmediate_generator.h"
 #include <random>
@@ -18,8 +20,7 @@ private:
     std::mt19937 rng;
     
 public:
-    ImmGenTestbench() : TestbenchBase<Vimmediate_generator>(true, "imm_gen_trace.vcd"), rng(12345) {
-        TB_LOG("Immediate Generator Testbench initialized");
+    ImmGenTestbench() : TestbenchBase<Vimmediate_generator>(false), rng(12345) {
     }
     
     int32_t get_signed_immediate() {
@@ -31,7 +32,6 @@ public:
     }
     
     void test_i_type() {
-        TB_LOG("Test: I-Type immediate extraction");
         std::uniform_int_distribution<int32_t> dist(-2048, 2047);
         
         for (int i = 0; i < 20; i++) {
@@ -45,12 +45,11 @@ public:
             eval();
             
             int32_t got = get_signed_immediate();
-            TB_ASSERT_EQ(got, imm_val, "I-Type immediate");
+            CHECK(got == imm_val);
         }
     }
     
     void test_s_type() {
-        TB_LOG("Test: S-Type immediate extraction");
         std::uniform_int_distribution<int32_t> dist(-2048, 2047);
         
         for (int i = 0; i < 20; i++) {
@@ -66,12 +65,11 @@ public:
             eval();
             
             int32_t got = get_signed_immediate();
-            TB_ASSERT_EQ(got, imm_val, "S-Type immediate");
+            CHECK(got == imm_val);
         }
     }
     
     void test_b_type() {
-        TB_LOG("Test: B-Type immediate extraction");
         std::uniform_int_distribution<int32_t> dist(-4096, 4094);
         
         for (int i = 0; i < 20; i++) {
@@ -92,12 +90,11 @@ public:
             eval();
             
             int32_t got = get_signed_immediate();
-            TB_ASSERT_EQ(got, val, "B-Type immediate");
+            CHECK(got == val);
         }
     }
     
     void test_u_type() {
-        TB_LOG("Test: U-Type immediate extraction");
         std::uniform_int_distribution<uint32_t> dist(0, 0xFFFFF);
         
         for (int i = 0; i < 20; i++) {
@@ -111,12 +108,11 @@ public:
             eval();
             
             int32_t got = get_signed_immediate();
-            TB_ASSERT_EQ(got, expected, "U-Type immediate");
+            CHECK(got == expected);
         }
     }
     
     void test_j_type() {
-        TB_LOG("Test: J-Type immediate extraction");
         std::uniform_int_distribution<int32_t> dist(-524288, 524286);
         
         for (int i = 0; i < 20; i++) {
@@ -137,28 +133,17 @@ public:
             eval();
             
             int32_t got = get_signed_immediate();
-            TB_ASSERT_EQ(got, val, "J-Type immediate");
+            CHECK(got == val);
         }
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        ImmGenTestbench tb;
+TEST_CASE("Immediate Generator") {
+ImmGenTestbench tb;
         
         tb.test_i_type();
         tb.test_s_type();
         tb.test_b_type();
         tb.test_u_type();
         tb.test_j_type();
-        
-        TB_LOG("All Immediate Generator tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "program_loader.h"
 #include <Vchip_top.h>
@@ -62,10 +64,8 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    CsrTestbench tb;
+TEST_CASE("Csr") {
+CsrTestbench tb;
     
     // Load program binary
     tb.load_program(PROGRAM_BIN_PATH);
@@ -85,40 +85,47 @@ int main(int argc, char** argv) {
         
         // Check if we entered trap handler
         if (s11 == 0xCAFEBABE && !trap_handler_hit) {
-            printf("Cycle %d: Trap Handler Hit! (s11=0xCAFEBABE)\n", i);
+            printf("Cycle %d: Trap Handler Hit! (s11=0xCAFEBABE)
+", i);
             trap_handler_hit = true;
             
             uint32_t s2 = tb.read_reg(18); // s2 (read from mcause)
             uint32_t mcause = tb.get_mcause();
             
-            printf("Cycle %d: s2 (from mcause) = %u, mcause_reg = %u\n", i, s2, mcause);
+            printf("Cycle %d: s2 (from mcause) = %u, mcause_reg = %u
+", i, s2, mcause);
             
             if (s2 == 11) {
-                printf("Cycle %d: MCAUSE is correct (11 = ECALL)\n", i);
+                printf("Cycle %d: MCAUSE is correct (11 = ECALL)
+", i);
             } else {
-                fprintf(stderr, "FAIL: MCAUSE incorrect. Expected 11, got %u\n", s2);
+                fprintf(stderr, "FAIL: MCAUSE incorrect. Expected 11, got %u
+", s2);
                 return 1;
             }
         }
         
         // Check if we returned from trap (s4 = 0x12345678)
         if (s4 == 0x12345678 && trap_handler_hit) {
-            printf("Cycle %d: Returned from Trap! (s4=0x12345678)\n", i);
+            printf("Cycle %d: Returned from Trap! (s4=0x12345678)
+", i);
             ecall_return_hit = true;
             break;
         }
     }
     
     if (!trap_handler_hit) {
-        fprintf(stderr, "FAIL: Did not enter trap handler\n");
+        fprintf(stderr, "FAIL: Did not enter trap handler
+");
         return 1;
     }
     
     if (!ecall_return_hit) {
-        fprintf(stderr, "FAIL: Did not return from trap handler\n");
+        fprintf(stderr, "FAIL: Did not return from trap handler
+");
         return 1;
     }
     
-    printf("PASS: CSR Exception Test Passed!\n");
-    return 0;
+    printf("PASS: CSR Exception Test Passed!
+");
 }

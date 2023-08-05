@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vcontrol_unit.h"
 #include <map>
@@ -9,8 +11,7 @@
  */
 class ControlUnitTestbench : public TestbenchBase<Vcontrol_unit> {
 public:
-    ControlUnitTestbench() : TestbenchBase<Vcontrol_unit>(true, "control_unit_trace.vcd") {
-        TB_LOG("Control Unit Testbench initialized");
+    ControlUnitTestbench() : TestbenchBase<Vcontrol_unit>(false) {
     }
     
     void check(uint8_t opcode, uint8_t funct3, uint8_t rs1, 
@@ -34,13 +35,11 @@ public:
             else if (sig.first == "csr_write_enable") got = dut->csr_write_enable;
             else if (sig.first == "csr_to_register_select") got = dut->csr_to_register_select;
             
-            std::string msg = std::string(name) + " " + sig.first;
-            TB_ASSERT_EQ(got, sig.second, msg.c_str());
+            CHECK(got == sig.second);
         }
     }
     
     void test_r_type() {
-        TB_LOG("Test: R-Type instructions");
         check(0b0110011, 0, 0, {
             {"register_write_enable", 1},
             {"alu_operation_code", 0b010},
@@ -52,7 +51,6 @@ public:
     }
     
     void test_i_type() {
-        TB_LOG("Test: I-Type instructions");
         check(0b0010011, 0, 0, {
             {"register_write_enable", 1},
             {"alu_operation_code", 0b011},
@@ -62,7 +60,6 @@ public:
     }
     
     void test_load() {
-        TB_LOG("Test: Load instructions");
         check(0b0000011, 0, 0, {
             {"register_write_enable", 1},
             {"memory_read_enable", 1},
@@ -73,7 +70,6 @@ public:
     }
     
     void test_store() {
-        TB_LOG("Test: Store instructions");
         check(0b0100011, 0, 0, {
             {"memory_write_enable", 1},
             {"alu_source_select", 1},
@@ -83,7 +79,6 @@ public:
     }
     
     void test_branch() {
-        TB_LOG("Test: Branch instructions");
         check(0b1100011, 0, 0, {
             {"branch", 1},
             {"alu_operation_code", 0b001},
@@ -92,7 +87,6 @@ public:
     }
     
     void test_jal() {
-        TB_LOG("Test: JAL instruction");
         check(0b1101111, 0, 0, {
             {"jump", 1},
             {"register_write_enable", 1},
@@ -101,7 +95,6 @@ public:
     }
     
     void test_jalr() {
-        TB_LOG("Test: JALR instruction");
         check(0b1100111, 0, 0, {
             {"jump", 1},
             {"register_write_enable", 1},
@@ -111,7 +104,6 @@ public:
     }
     
     void test_lui() {
-        TB_LOG("Test: LUI instruction");
         check(0b0110111, 0, 0, {
             {"register_write_enable", 1},
             {"alu_source_select", 1},
@@ -120,7 +112,6 @@ public:
     }
     
     void test_auipc() {
-        TB_LOG("Test: AUIPC instruction");
         check(0b0010111, 0, 0, {
             {"register_write_enable", 1},
             {"alu_source_select", 1},
@@ -130,7 +121,6 @@ public:
     }
     
     void test_csr() {
-        TB_LOG("Test: CSR instructions");
         check(0b1110011, 0b001, 0, {
             {"register_write_enable", 1},
             {"csr_write_enable", 1},
@@ -139,11 +129,8 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        ControlUnitTestbench tb;
+TEST_CASE("Control Unit") {
+ControlUnitTestbench tb;
         
         tb.test_r_type();
         tb.test_i_type();
@@ -155,12 +142,4 @@ int main(int argc, char** argv) {
         tb.test_lui();
         tb.test_auipc();
         tb.test_csr();
-        
-        TB_LOG("All Control Unit tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

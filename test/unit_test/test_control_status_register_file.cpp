@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vcontrol_status_register_file.h"
 
@@ -16,7 +18,7 @@
  */
 class CSRTestbench : public ClockedTestbench<Vcontrol_status_register_file> {
 public:
-    CSRTestbench() : ClockedTestbench<Vcontrol_status_register_file>(100, true, "csr_trace.vcd") {
+    CSRTestbench() : ClockedTestbench<Vcontrol_status_register_file>(100, false) {
         dut->rst_n = 0;
         dut->csr_address = 0;
         dut->csr_write_enable = 0;
@@ -27,7 +29,6 @@ public:
         dut->machine_return_enable = 0;
         dut->timer_interrupt_request = 0;
         dut->hart_id = 0;
-        TB_LOG("CSR File Testbench initialized");
     }
     
     void set_clk(uint8_t value) override {
@@ -40,7 +41,6 @@ public:
         tick();
         dut->rst_n = 1;
         tick();
-        TB_LOG("Reset complete");
     }
     
     void write_csr(uint16_t addr, uint32_t data) {
@@ -58,34 +58,31 @@ public:
     }
     
     void test_basic_read_write() {
-        TB_LOG("Test: Basic CSR read/write");
         
         // Write MTVEC
         write_csr(CSR_MTVEC, 0x1000);
-        TB_ASSERT_EQ(read_csr(CSR_MTVEC), 0x1000, "MTVEC write/read");
-        TB_ASSERT_EQ(dut->mtvec_out, 0x1000, "MTVEC output");
+        CHECK(read_csr(CSR_MTVEC) == 0x1000);
+        CHECK(dut->mtvec_out == 0x1000);
         
         // Write MIE
         write_csr(CSR_MIE, 0x888);
-        TB_ASSERT_EQ(read_csr(CSR_MIE), 0x888, "MIE write/read");
+        CHECK(read_csr(CSR_MIE) == 0x888);
     }
     
     void test_mhartid() {
-        TB_LOG("Test: MHARTID register");
         
         dut->hart_id = 0;
         eval();
-        TB_ASSERT_EQ(read_csr(CSR_MHARTID), 0, "MHARTID = 0");
+        CHECK(read_csr(CSR_MHARTID) == 0);
         
         dut->hart_id = 1;
         eval();
-        TB_ASSERT_EQ(read_csr(CSR_MHARTID), 1, "MHARTID = 1");
+        CHECK(read_csr(CSR_MHARTID) == 1);
         
         dut->hart_id = 0; // Restore
     }
     
     void test_exception_handling() {
-        TB_LOG("Test: Exception handling");
         
         // Enable interrupts in MSTATUS
         write_csr(CSR_MSTATUS, 0b1000); // MIE=1
@@ -102,28 +99,26 @@ public:
         eval();
         
         // Check MEPC and MCAUSE were updated
-        TB_ASSERT_EQ(read_csr(CSR_MEPC), 0x500, "MEPC after exception");
-        TB_ASSERT_EQ(read_csr(CSR_MCAUSE), 0x8, "MCAUSE after exception");
+        CHECK(read_csr(CSR_MEPC) == 0x500);
+        CHECK(read_csr(CSR_MCAUSE) == 0x8);
     }
     
     void test_interrupt_pending() {
-        TB_LOG("Test: Interrupt pending (MIP)");
         
         dut->timer_interrupt_request = 0;
         eval();
         uint32_t mip = read_csr(CSR_MIP);
-        TB_ASSERT_EQ(mip & (1 << 7), 0, "MIP timer bit clear");
+        CHECK(mip & (1 << 7) == 0);
         
         dut->timer_interrupt_request = 1;
         eval();
         mip = read_csr(CSR_MIP);
-        TB_ASSERT_EQ((mip >> 7) & 1, 1, "MIP timer bit set");
+        CHECK((mip >> 7) & 1 == 1);
         
         dut->timer_interrupt_request = 0;
     }
     
     void test_mret() {
-        TB_LOG("Test: MRET (Machine Return)");
         
         // Set MEPC to return address
         write_csr(CSR_MEPC, 0x1234);
@@ -134,15 +129,12 @@ public:
         dut->machine_return_enable = 0;
         
         // MEPC output should be available
-        TB_ASSERT_EQ(dut->mepc_out, 0x1234, "MEPC output after MRET");
+        CHECK(dut->mepc_out == 0x1234);
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        CSRTestbench tb;
+TEST_CASE("Control Status Register File") {
+CSRTestbench tb;
         
         tb.reset();
         tb.test_basic_read_write();
@@ -150,12 +142,4 @@ int main(int argc, char** argv) {
         tb.test_exception_handling();
         tb.test_interrupt_pending();
         tb.test_mret();
-        
-        TB_LOG("All CSR File tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

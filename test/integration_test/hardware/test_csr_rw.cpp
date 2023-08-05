@@ -1,10 +1,11 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: CSR Read/Write Operations
 // Tests CSRRW, CSRRS, CSRRC instructions:
 // - CSRRW: Write x1 to mtvec, read old value to x2
 // - CSRRS: Set bits in mtvec, read old value to x4
 // - CSRRC: Clear bits in mtvec, read old value to x5
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -42,10 +43,8 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Csr Rw") {
+ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
         0x0aa00093, // ADDI x1, x0, 0xAA
@@ -76,10 +75,8 @@ int main(int argc, char** argv) {
     uint32_t x5 = tb.read_register(5);
     uint32_t mtvec = tb.read_csr_mtvec();
 
-    TB_ASSERT_EQ(x2, 0, "x2 should be 0 (old mtvec)");
-    TB_ASSERT_EQ(x4, 0xAA, "x4 should be 0xAA");
-    TB_ASSERT_EQ(x5, 0xFF, "x5 should be 0xFF");
-    TB_ASSERT_EQ(mtvec, 0xAA, "mtvec should be 0xAA");
-
-    return 0;
+    CHECK(x2 == 0);
+    CHECK(x4 == 0xAA);
+    CHECK(x5 == 0xFF);
+    CHECK(mtvec == 0xAA);
 }

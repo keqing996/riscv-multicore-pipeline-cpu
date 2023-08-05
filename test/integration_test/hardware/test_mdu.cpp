@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: MDU Operations Integration Test
 // Tests multiply, divide, and remainder operations:
 // - ADDI x1, x0, 10   (x1 = 10)
@@ -10,7 +12,6 @@
 // - EBREAK
 // Note: MDU operations take ~32 cycles each
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -48,10 +49,8 @@ public:
 
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Mdu") {
+ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
         0x00a00093, // ADDI x1, x0, 10
@@ -83,12 +82,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify Register Values
-    TB_ASSERT_EQ(tb.read_register(3), 50, "x3 (MUL 10*5) should be 50");
-    TB_ASSERT_EQ(tb.read_register(5), 20, "x5 (DIV 100/5) should be 20");
-    TB_ASSERT_EQ(tb.read_register(7), 2, "x7 (REM 100%7) should be 2");
-
-    return 0;
+    CHECK(tb.read_register(3) == 50);
+    CHECK(tb.read_register(5) == 20);
+    CHECK(tb.read_register(7) == 2);
 }

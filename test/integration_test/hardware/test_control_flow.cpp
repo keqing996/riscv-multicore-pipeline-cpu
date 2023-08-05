@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: Control Flow Integration Test
 // Tests branch and jump instructions:
 // - ADDI x1, x0, 10  (x1 = 10)
@@ -9,7 +11,6 @@
 // - ADDI x6, x0, 1   (Skipped)
 // - EBREAK           (Stop)
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -47,10 +48,8 @@ public:
 
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Control Flow") {
+ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
         0x00a00093, // ADDI x1, x0, 10
@@ -81,15 +80,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify Register Values
-    TB_ASSERT_EQ(tb.read_register(1), 10, "x1 should be 10");
-    TB_ASSERT_EQ(tb.read_register(2), 10, "x2 should be 10");
-    TB_ASSERT_EQ(tb.read_register(3), 0, "x3 should be 0 (skipped)");
-    TB_ASSERT_EQ(tb.read_register(4), 5, "x4 should be 5");
-    TB_ASSERT_EQ(tb.read_register(5), 0x18, "x5 should be 0x18 (return address)");
-    TB_ASSERT_EQ(tb.read_register(6), 0, "x6 should be 0 (skipped)");
-
-    return 0;
+    CHECK(tb.read_register(1) == 10);
+    CHECK(tb.read_register(2) == 10);
+    CHECK(tb.read_register(3) == 0);
+    CHECK(tb.read_register(4) == 5);
+    CHECK(tb.read_register(5) == 0x18);
+    CHECK(tb.read_register(6) == 0);
 }

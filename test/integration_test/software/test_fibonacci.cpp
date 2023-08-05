@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "program_loader.h"
 #include <Vchip_top.h>
@@ -50,10 +52,8 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    FibonacciTestbench tb;
+TEST_CASE("Fibonacci") {
+FibonacciTestbench tb;
     
     // Load program binary
     tb.load_program(PROGRAM_BIN_PATH);
@@ -73,14 +73,18 @@ int main(int argc, char** argv) {
                 uint32_t pc = tb.get_pc();
                 uint32_t result = tb.read_reg(10); // x10/a0
                 
-                fprintf(stderr, "\nCycle %d: EBREAK at PC=0x%x, x10=%u\n", i, pc, result);
+                fprintf(stderr, "
+Cycle %d: EBREAK at PC=0x%x, x10=%u
+", i, pc, result);
                 
                 if (result != 55) {
-                    fprintf(stderr, "FAIL: Expected x10=55, got %u\n", result);
+                    fprintf(stderr, "FAIL: Expected x10=55, got %u
+", result);
                     return 1;
                 }
                 
-                fprintf(stderr, "PASS: Fibonacci result = %u\n", result);
+                fprintf(stderr, "PASS: Fibonacci result = %u
+", result);
                 found_ebreak = true;
                 break;
             }
@@ -88,9 +92,10 @@ int main(int argc, char** argv) {
     }
     
     if (!found_ebreak) {
-        fprintf(stderr, "\n\nFAIL: Timeout waiting for EBREAK\n");
+        fprintf(stderr, "
+
+FAIL: Timeout waiting for EBREAK
+");
         return 1;
     }
-    
-    return 0;
 }

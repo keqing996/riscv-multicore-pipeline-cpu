@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 // Test: Hazard Handling Integration Test
 // Tests RAW hazards and load-use hazards:
 // - ADDI x1, x0, 10
@@ -11,7 +13,6 @@
 // - ADD x8, x7, x1     (x8 = 80) (Load-Use Hazard on x7)
 // - EBREAK
 
-#include "../common/tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
@@ -49,10 +50,8 @@ public:
 
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    ChipTopTestbench tb;
+TEST_CASE("Hazards") {
+ChipTopTestbench tb;
 
     std::vector<uint32_t> program = {
         0x00a00093, // ADDI x1, x0, 10
@@ -85,14 +84,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    TB_ASSERT_EQ(ebreak_reached, true, "EBREAK should be reached");
+    CHECK(ebreak_reached == true);
 
     // Verify Register Values
-    TB_ASSERT_EQ(tb.read_register(3), 30, "x3 should be 30");
-    TB_ASSERT_EQ(tb.read_register(4), 40, "x4 should be 40 (RAW hazard handled)");
-    TB_ASSERT_EQ(tb.read_register(5), 70, "x5 should be 70 (RAW hazards handled)");
-    TB_ASSERT_EQ(tb.read_register(7), 70, "x7 should be 70 (load result)");
-    TB_ASSERT_EQ(tb.read_register(8), 80, "x8 should be 80 (load-use hazard handled)");
-
-    return 0;
+    CHECK(tb.read_register(3) == 30);
+    CHECK(tb.read_register(4) == 40);
+    CHECK(tb.read_register(5) == 70);
+    CHECK(tb.read_register(7) == 70);
+    CHECK(tb.read_register(8) == 80);
 }

@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
 #include "tb_base.h"
 #include "Vprogram_counter.h"
 #include <random>
@@ -11,10 +13,9 @@ private:
     std::mt19937 rng;
     
 public:
-    PCTestbench() : ClockedTestbench<Vprogram_counter>(100, true, "pc_trace.vcd"), rng(12345) {
+    PCTestbench() : ClockedTestbench<Vprogram_counter>(100, false), rng(12345) {
         dut->rst_n = 0;
         dut->data_in = 0;
-        TB_LOG("Program Counter Testbench initialized");
     }
     
     void set_clk(uint8_t value) override {
@@ -28,11 +29,10 @@ public:
         dut->rst_n = 1;
         tick();
         
-        TB_ASSERT_EQ(dut->data_out, 0, "Reset value");
+        CHECK(dut->data_out == 0);
     }
     
     void test_random_updates() {
-        TB_LOG("Test: Random PC updates");
         
         std::uniform_int_distribution<uint32_t> dist(0, 0xFFFFFFFF);
         
@@ -41,38 +41,26 @@ public:
             dut->data_in = val;
             tick();
             
-            TB_ASSERT_EQ(dut->data_out, val, "PC update");
+            CHECK(dut->data_out == val);
         }
     }
     
     void test_sequential() {
-        TB_LOG("Test: Sequential PC increments");
         
         uint32_t pc = 0;
         for (int i = 0; i < 10; i++) {
             dut->data_in = pc;
             tick();
-            TB_ASSERT_EQ(dut->data_out, pc, "Sequential PC");
+            CHECK(dut->data_out == pc);
             pc += 4;
         }
     }
 };
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    
-    try {
-        PCTestbench tb;
+TEST_CASE("Program Counter") {
+PCTestbench tb;
         
         tb.reset();
         tb.test_random_updates();
         tb.test_sequential();
-        
-        TB_LOG("All Program Counter tests PASSED!");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        TB_ERROR(e.what());
-        return 1;
-    }
 }

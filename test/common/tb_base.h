@@ -109,36 +109,6 @@ public:
     virtual void set_clk(uint8_t value) = 0;
 };
 
-// Logging macros
-#define TB_LOG(msg) \
-    std::cout << "[TB] " << msg << std::endl
-
-#define TB_INFO(msg) \
-    std::cout << "[INFO] " << msg << std::endl
-
-#define TB_ERROR(msg) \
-    std::cerr << "[ERROR] " << msg << std::endl
-
-#define TB_ASSERT(cond, msg) \
-    do { \
-        if (!(cond)) { \
-            TB_ERROR(msg); \
-            throw std::runtime_error(msg); \
-        } \
-    } while(0)
-
-#define TB_ASSERT_EQ(actual, expected, msg) \
-    do { \
-        if ((actual) != (expected)) { \
-            std::cerr << "[ERROR] " << msg << std::endl; \
-            std::cerr << "  Expected: 0x" << std::hex << (uint64_t)(expected) \
-                      << " (" << std::dec << (uint64_t)(expected) << ")" << std::endl; \
-            std::cerr << "  Actual:   0x" << std::hex << (uint64_t)(actual) \
-                      << " (" << std::dec << (uint64_t)(actual) << ")" << std::endl; \
-            throw std::runtime_error(msg); \
-        } \
-    } while(0)
-
 // Utility functions
 namespace tb_util {
     // Random number generation
