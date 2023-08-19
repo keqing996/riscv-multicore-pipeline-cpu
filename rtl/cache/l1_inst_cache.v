@@ -1,6 +1,7 @@
 module l1_inst_cache (
     input wire clk,
     input wire rst_n,
+    input wire [31:0] hart_id, // Debug
 
     // CPU Interface
     input wire [31:0] program_counter_address,

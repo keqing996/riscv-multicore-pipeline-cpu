@@ -79,6 +79,7 @@ module core_tile (
     l1_inst_cache u_icache (
         .clk(clk),
         .rst_n(rst_n),
+        .hart_id(hart_id),
         // CPU Interface
         .program_counter_address(pc_addr),
         .instruction(instruction),

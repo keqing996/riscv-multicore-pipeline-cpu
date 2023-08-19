@@ -78,10 +78,6 @@ module l2_cache (
         end else begin
             state <= next_state;
             refill_buffer <= next_refill_buffer;
-            if (s_en || state != STATE_IDLE) begin
-                 $display("%m: state=%d addr=%h we=%b hit=%b mem_ready=%b mem_rdata=%h s_ready=%b s_rdata=%h time=%t", 
-                          state, s_addr, s_we, hit, mem_ready, mem_rdata, s_ready, s_rdata, $time);
-            end
         end
     end
 

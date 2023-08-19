@@ -21,7 +21,6 @@ public:
         dut->rst_n = 0;
         tick();
         dut->rst_n = 1;
-        tick();
     }
     
     void test_cold_miss() {

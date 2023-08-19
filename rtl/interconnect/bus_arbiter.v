@@ -125,11 +125,6 @@ module bus_arbiter (
                 if (effective_owner == OWNER_M0) priority_m1 <= 1;
                 if (effective_owner == OWNER_M1) priority_m1 <= 0;
             end
-            
-            if (m0_enable || m1_enable || bus_enable) begin
-                 $display("BusArbiter: time=%t owner=%d eff=%d addr=%h ready=%b m0_en=%b m1_en=%b", 
-                          $time, current_owner, effective_owner, bus_addr, bus_ready, m0_enable, m1_enable);
-            end
         end
     end
 

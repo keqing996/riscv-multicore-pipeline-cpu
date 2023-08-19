@@ -29,8 +29,34 @@ public:
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__u_regfile__DOT__registers[reg_idx];
     }
 
+    uint32_t read_register_tile1(int reg_idx) {
+        if (reg_idx < 0 || reg_idx >= 32) return 0;
+        return dut->rootp->chip_top__DOT__u_tile_1__DOT__u_core__DOT__u_backend__DOT__u_regfile__DOT__registers[reg_idx];
+    }
+
     uint32_t get_pc_ex() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__id_ex_program_counter;
+        // Try accessing the wire in core first, as it connects backend output to frontend
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__id_ex_program_counter;
+    }
+
+    uint32_t get_pc_ex_tile1() {
+        return dut->rootp->chip_top__DOT__u_tile_1__DOT__u_core__DOT__id_ex_program_counter;
+    }
+
+    uint32_t get_stall() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__stall_pipeline;
+    }
+
+    uint32_t get_grant() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__instruction_grant_reg;
+    }
+
+    uint32_t get_if_id_pc() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__if_id_program_counter;
+    }
+
+    uint32_t get_instr() {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__instruction;
     }
 
     void do_reset() {
@@ -65,7 +91,7 @@ TEST_CASE("Arithmetic Operations Integration Test") {
 
     // Run until EBREAK (PC = 0x28 = 40)
     bool ebreak_reached = false;
-    for (int cycles = 0; cycles < 1000; cycles++) {
+    for (int cycles = 0; cycles < 300; cycles++) {
         tb.tick();
         
         uint32_t pc_ex = tb.get_pc_ex();
