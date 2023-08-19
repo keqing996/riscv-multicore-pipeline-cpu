@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: Hazard Handling Integration Test
 // Tests RAW hazards and load-use hazards:
 // - ADDI x1, x0, 10

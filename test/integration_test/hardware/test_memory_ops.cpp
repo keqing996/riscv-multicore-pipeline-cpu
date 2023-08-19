@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: Memory Operations Integration Test
 // Tests byte/halfword/word load and store operations:
 // - LUI x1, 1          (x1 = 0x1000)

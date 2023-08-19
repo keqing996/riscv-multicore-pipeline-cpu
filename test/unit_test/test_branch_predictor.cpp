@@ -48,9 +48,11 @@ public:
         eval();
         
         std::string prefix(name);
-        CHECK(dut->prediction_taken, exp_taken ? 1 : 0, (prefix + " prediction_taken" ==).c_str());
+        INFO((prefix + " prediction_taken").c_str());
+        CHECK(dut->prediction_taken == (exp_taken ? 1 : 0));
         if (exp_taken) {
-            CHECK(dut->prediction_target, exp_target, (prefix + " prediction_target" ==).c_str());
+            INFO((prefix + " prediction_target").c_str());
+            CHECK(dut->prediction_target == exp_target);
         }
     }
     

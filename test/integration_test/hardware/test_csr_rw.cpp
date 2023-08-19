@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: CSR Read/Write Operations
 // Tests CSRRW, CSRRS, CSRRC instructions:
 // - CSRRW: Write x1 to mtvec, read old value to x2

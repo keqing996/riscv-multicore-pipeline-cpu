@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: Control Flow Integration Test
 // Tests branch and jump instructions:
 // - ADDI x1, x0, 10  (x1 = 10)

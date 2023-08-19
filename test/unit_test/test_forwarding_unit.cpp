@@ -24,8 +24,10 @@ public:
         eval();
         
         std::string prefix(name);
-        CHECK(dut->forward_a_select, exp_a, (prefix + " forward_a" ==).c_str());
-        CHECK(dut->forward_b_select, exp_b, (prefix + " forward_b" ==).c_str());
+        INFO((prefix + " forward_a").c_str());
+        CHECK(dut->forward_a_select == exp_a);
+        INFO((prefix + " forward_b").c_str());
+        CHECK(dut->forward_b_select == exp_b);
     }
     
     void test_no_forwarding() {

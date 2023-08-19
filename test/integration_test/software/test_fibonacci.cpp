@@ -73,18 +73,14 @@ FibonacciTestbench tb;
                 uint32_t pc = tb.get_pc();
                 uint32_t result = tb.read_reg(10); // x10/a0
                 
-                fprintf(stderr, "
-Cycle %d: EBREAK at PC=0x%x, x10=%u
-", i, pc, result);
+                fprintf(stderr, "\nCycle %d: EBREAK at PC=0x%x, x10=%u\n", i, pc, result);
                 
                 if (result != 55) {
-                    fprintf(stderr, "FAIL: Expected x10=55, got %u
-", result);
-                    return 1;
+                    fprintf(stderr, "FAIL: Expected x10=55, got %u\n", result);
+                    REQUIRE(result == 55);
                 }
                 
-                fprintf(stderr, "PASS: Fibonacci result = %u
-", result);
+                fprintf(stderr, "PASS: Fibonacci result = %u\n", result);
                 found_ebreak = true;
                 break;
             }
@@ -92,10 +88,7 @@ Cycle %d: EBREAK at PC=0x%x, x10=%u
     }
     
     if (!found_ebreak) {
-        fprintf(stderr, "
-
-FAIL: Timeout waiting for EBREAK
-");
-        return 1;
+        fprintf(stderr, "\n\nFAIL: Timeout waiting for EBREAK\n");
+        REQUIRE(found_ebreak == true);
     }
 }

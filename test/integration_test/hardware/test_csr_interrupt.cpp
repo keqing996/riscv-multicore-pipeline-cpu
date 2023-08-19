@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: CSR Timer Interrupt
 // Tests timer interrupt handling:
 // - Setup mtvec, enable interrupts (MIE bit in mstatus)

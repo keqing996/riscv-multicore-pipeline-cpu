@@ -108,12 +108,12 @@ public:
         dut->timer_interrupt_request = 0;
         eval();
         uint32_t mip = read_csr(CSR_MIP);
-        CHECK(mip & (1 << 7) == 0);
+        CHECK((mip & (1 << 7)) == 0);
         
         dut->timer_interrupt_request = 1;
         eval();
         mip = read_csr(CSR_MIP);
-        CHECK((mip >> 7) & 1 == 1);
+        CHECK(((mip >> 7) & 1) == 1);
         
         dut->timer_interrupt_request = 0;
     }

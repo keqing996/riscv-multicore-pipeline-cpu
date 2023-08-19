@@ -25,10 +25,14 @@ public:
         eval();
         
         std::string prefix(name);
-        CHECK(dut->bus_write_data, exp_wdata, (prefix + " bus_write_data" ==).c_str());
-        CHECK(dut->bus_byte_enable, exp_be, (prefix + " bus_byte_enable" ==).c_str());
-        CHECK(dut->bus_write_enable, 1, (prefix + " bus_write_enable" ==).c_str());
-        CHECK(dut->bus_address, addr, (prefix + " bus_address" ==).c_str());
+        INFO((prefix + " bus_write_data").c_str());
+        CHECK(dut->bus_write_data == exp_wdata);
+        INFO((prefix + " bus_byte_enable").c_str());
+        CHECK(dut->bus_byte_enable == exp_be);
+        INFO((prefix + " bus_write_enable").c_str());
+        CHECK(dut->bus_write_enable == 1);
+        INFO((prefix + " bus_address").c_str());
+        CHECK(dut->bus_address == addr);
     }
     
     void check_load(uint32_t addr, uint32_t rdata, uint8_t funct3, 
@@ -41,7 +45,8 @@ public:
         eval();
         
         int32_t got = static_cast<int32_t>(dut->memory_read_data_final);
-        CHECK(got, exp_rdata, name ==);
+        INFO(name);
+        CHECK(got == exp_rdata);
     }
     
     void test_store_word() {

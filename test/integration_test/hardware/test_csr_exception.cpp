@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: CSR Exception Handling
 // Tests exception handling with ECALL:
 // - Setup mtvec to point to handler
@@ -23,7 +24,6 @@ public:
         dut->rst_n = 0;
     }
 
-public:
     void set_clk(uint8_t value) override {
         dut->clk = value;
     }

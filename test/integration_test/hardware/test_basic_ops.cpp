@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: Basic Operations Integration Test
 // Runs a simple assembly program on the full chip:
 // - ADDI x1, x0, 10  (x1 = 10)
@@ -12,7 +13,6 @@
 
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>  // For internal signals
-#include <fstream>
 
 class ChipTopTestbench : public ClockedTestbench<Vchip_top> {
 public:
@@ -146,13 +146,11 @@ ChipTopTestbench tb;
         bool stall_glob = tb.get_stall_global();
         
         if (cycles < 30 || cycles % 100 == 0) {  // More debug output
-            printf("[DEBUG] Cycle %d: PC_IF=0x%x PC_ID=0x%x(0x%x) PC_EX=0x%x grant=%d stall_g=%d icache_inst=0x%x
-", 
+            printf("[DEBUG] Cycle %d: PC_IF=0x%x PC_ID=0x%x(0x%x) PC_EX=0x%x grant=%d stall_g=%d icache_inst=0x%x\n", 
                    cycles, pc_if, pc_id, inst_id, pc_ex, inst_grant, stall_glob, icache_inst);
         }
         if (pc_ex == 24) { // EBREAK instruction address
-            printf("[TB] EBREAK Executed at cycle %d
-", cycles);
+            printf("[TB] EBREAK Executed at cycle %d\n", cycles);
             ebreak_reached = true;
             // Wait for pipeline to flush
             for (int i = 0; i < 10; i++) {
@@ -171,8 +169,7 @@ ChipTopTestbench tb;
     uint32_t x4 = tb.read_register(4);
     uint32_t x5 = tb.read_register(5);
 
-    printf("[TB] x1=%u, x2=%u, x3=%u, x4=%u, x5=0x%x
-", x1, x2, x3, x4, x5);
+    printf("[TB] x1=%u, x2=%u, x3=%u, x4=%u, x5=0x%x\n", x1, x2, x3, x4, x5);
 
     CHECK(x1 == 10);
     CHECK(x2 == 20);
@@ -182,7 +179,6 @@ ChipTopTestbench tb;
 
     // Verify Memory Content
     uint32_t mem_val = tb.read_memory_word(0x1000);
-    printf("[TB] Memory[0x1000] = %u
-", mem_val);
+    printf("[TB] Memory[0x1000] = %u\n", mem_val);
     CHECK(mem_val == 30);
 }

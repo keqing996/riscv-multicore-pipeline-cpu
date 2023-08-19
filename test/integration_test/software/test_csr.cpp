@@ -85,47 +85,39 @@ CsrTestbench tb;
         
         // Check if we entered trap handler
         if (s11 == 0xCAFEBABE && !trap_handler_hit) {
-            printf("Cycle %d: Trap Handler Hit! (s11=0xCAFEBABE)
-", i);
+            printf("Cycle %d: Trap Handler Hit! (s11=0xCAFEBABE)\n", i);
             trap_handler_hit = true;
             
             uint32_t s2 = tb.read_reg(18); // s2 (read from mcause)
             uint32_t mcause = tb.get_mcause();
             
-            printf("Cycle %d: s2 (from mcause) = %u, mcause_reg = %u
-", i, s2, mcause);
+            printf("Cycle %d: s2 (from mcause) = %u, mcause_reg = %u\n", i, s2, mcause);
             
             if (s2 == 11) {
-                printf("Cycle %d: MCAUSE is correct (11 = ECALL)
-", i);
+                printf("Cycle %d: MCAUSE is correct (11 = ECALL)\n", i);
             } else {
-                fprintf(stderr, "FAIL: MCAUSE incorrect. Expected 11, got %u
-", s2);
-                return 1;
+                fprintf(stderr, "FAIL: MCAUSE incorrect. Expected 11, got %u\n", s2);
+                REQUIRE(s2 == 11);
             }
         }
         
         // Check if we returned from trap (s4 = 0x12345678)
         if (s4 == 0x12345678 && trap_handler_hit) {
-            printf("Cycle %d: Returned from Trap! (s4=0x12345678)
-", i);
+            printf("Cycle %d: Returned from Trap! (s4=0x12345678)\n", i);
             ecall_return_hit = true;
             break;
         }
     }
     
     if (!trap_handler_hit) {
-        fprintf(stderr, "FAIL: Did not enter trap handler
-");
-        return 1;
+        fprintf(stderr, "FAIL: Did not enter trap handler\n");
+        REQUIRE(trap_handler_hit == true);
     }
     
     if (!ecall_return_hit) {
-        fprintf(stderr, "FAIL: Did not return from trap handler
-");
-        return 1;
+        fprintf(stderr, "FAIL: Did not return from trap handler\n");
+        REQUIRE(ecall_return_hit == true);
     }
     
-    printf("PASS: CSR Exception Test Passed!
-");
+    printf("PASS: CSR Exception Test Passed!\n");
 }

@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: Forwarding Integration Test
 // Tests both GPR and CSR forwarding paths:
 // - GPR Forwarding (EX->EX): ADDI x1=10, ADD x2=x1+x1 (x2=20)

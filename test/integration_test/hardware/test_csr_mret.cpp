@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: CSR MRET (Machine Return)
 // Tests MRET instruction for returning from exception handler:
 // - Setup mtvec to 0x20

@@ -36,7 +36,8 @@ public:
         if (got != expected_ctrl) {
             std::stringstream ss;
             ss << name << " - Op=" << (int)alu_op << " F3=" << (int)funct3 << " F7=" << (int)funct7;
-            CHECK(got, expected_ctrl, ss.str( ==).c_str());
+            INFO(ss.str());
+            CHECK(got == expected_ctrl);
         }
     }
     

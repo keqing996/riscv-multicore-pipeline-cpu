@@ -4,6 +4,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 #include "tb_base.h"
+#include "tb_base.h"
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 

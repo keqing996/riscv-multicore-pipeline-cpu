@@ -23,12 +23,18 @@ public:
         eval();
         
         std::string prefix(name);
-        CHECK(dut->opcode, exp_opcode, (prefix + " opcode" ==).c_str());
-        CHECK(dut->rd, exp_rd, (prefix + " rd" ==).c_str());
-        CHECK(dut->function_3, exp_funct3, (prefix + " funct3" ==).c_str());
-        CHECK(dut->rs1, exp_rs1, (prefix + " rs1" ==).c_str());
-        CHECK(dut->rs2, exp_rs2, (prefix + " rs2" ==).c_str());
-        CHECK(dut->function_7, exp_funct7, (prefix + " funct7" ==).c_str());
+        INFO((prefix + " opcode").c_str());
+        CHECK(dut->opcode == exp_opcode);
+        INFO((prefix + " rd").c_str());
+        CHECK(dut->rd == exp_rd);
+        INFO((prefix + " funct3").c_str());
+        CHECK(dut->function_3 == exp_funct3);
+        INFO((prefix + " rs1").c_str());
+        CHECK(dut->rs1 == exp_rs1);
+        INFO((prefix + " rs2").c_str());
+        CHECK(dut->rs2 == exp_rs2);
+        INFO((prefix + " funct7").c_str());
+        CHECK(dut->function_7 == exp_funct7);
     }
     
     void test_r_type() {

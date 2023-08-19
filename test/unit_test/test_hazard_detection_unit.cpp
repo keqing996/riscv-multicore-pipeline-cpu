@@ -19,7 +19,8 @@ public:
         dut->memory_read_enable_execute = mem_read_ex;
         eval();
         
-        CHECK(dut->stall_pipeline, expected_stall, name ==);
+        INFO(name);
+        CHECK(dut->stall_pipeline == expected_stall);
     }
     
     void test_no_hazard() {

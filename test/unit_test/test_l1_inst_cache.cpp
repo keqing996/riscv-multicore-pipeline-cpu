@@ -36,8 +36,8 @@ public:
         
         // Simulate memory responses for 4-word cache line
         for (int i = 0; i < 4; i++) {
-            CHECK(dut->instruction_memory_address, 0x1000 + (i * 4 ==), 
-                        (std::string("Memory addr ") + std::to_string(i)).c_str());
+            INFO((std::string("Memory addr ") + std::to_string(i)).c_str());
+            CHECK(dut->instruction_memory_address == (0x1000 + (i * 4)));
             
             dut->instruction_memory_read_data = 0x00000013 + i;  // NOP variants
             dut->instruction_memory_ready = 1;

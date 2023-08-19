@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "tb_base.h"
 // Test: Backend Module Stall Handling
 // Tests two scenarios:
 // 1. Instruction fetch stall (instruction_grant=0): ID/EX gets bubble, other stages proceed
