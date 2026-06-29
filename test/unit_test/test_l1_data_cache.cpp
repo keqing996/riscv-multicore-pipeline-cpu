@@ -38,14 +38,21 @@ public:
         // Should stall and request memory
         CHECK(dut->stall_cpu == 1);
         CHECK(dut->mem_request == 1);
+
+        // Upstream may change while the cache owns the miss transaction.
+        dut->cpu_address = 0x3000;
         
         // Simulate memory responses for 4-word cache line
         for (int i = 0; i < 4; i++) {
+            CHECK(dut->mem_address == 0x2000 + static_cast<uint32_t>(i * 4));
             dut->mem_read_data = 0xAABBCC00 + i;
             dut->mem_ready = 1;
             tick();
             dut->mem_ready = 0;
         }
+
+        dut->cpu_read_enable = 0;
+        dut->cpu_address = 0x2000;
         
         // Wait for update and access done
         tick();
@@ -76,6 +83,14 @@ public:
         CHECK(dut->stall_cpu == 1);
         CHECK(dut->mem_request == 1);
         CHECK(dut->mem_write_enable == 1);
+
+        // The write transaction must use the request captured in IDLE.
+        dut->cpu_address = 0x3000;
+        dut->cpu_write_data = 0xDEADBEEF;
+        dut->cpu_byte_enable = 0b0011;
+        CHECK(dut->mem_address == 0x2004);
+        CHECK(dut->mem_write_data == 0x12345678);
+        CHECK(dut->mem_byte_enable == 0b1111);
         
         // Complete write
         dut->mem_ready = 1;

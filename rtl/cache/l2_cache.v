@@ -70,14 +70,39 @@ module l2_cache (
     reg [127:0] refill_buffer;
     reg [127:0] next_refill_buffer;
 
+    reg [31:0] request_address;
+    reg [31:0] request_write_data;
+    reg [3:0]  request_byte_enable;
+    reg        request_write_enable;
+    reg        request_read_enable;
+    reg        request_hit;
+
+    wire [INDEX_BITS-1:0] request_index = request_address[INDEX_BITS+OFFSET_BITS-1 : OFFSET_BITS];
+    wire [TAG_BITS-1:0] request_tag = request_address[31 : 31-TAG_BITS+1];
+    wire [1:0] request_word_offset = request_address[3:2];
+
     // State Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= STATE_IDLE;
             refill_buffer <= 0;
+            request_address <= 0;
+            request_write_data <= 0;
+            request_byte_enable <= 0;
+            request_write_enable <= 0;
+            request_read_enable <= 0;
+            request_hit <= 0;
         end else begin
             state <= next_state;
             refill_buffer <= next_refill_buffer;
+            if (state == STATE_IDLE && s_en) begin
+                request_address <= s_addr;
+                request_write_data <= s_wdata;
+                request_byte_enable <= s_be;
+                request_write_enable <= s_we;
+                request_read_enable <= !s_we;
+                request_hit <= hit;
+            end
         end
     end
 
@@ -122,9 +147,9 @@ module l2_cache (
             end
 
             STATE_FETCH_0: begin
-                mem_req = 1;
+                mem_req = request_read_enable;
                 mem_we = 0;
-                mem_addr = {s_addr[31:4], 4'b0000}; // Word 0
+                mem_addr = {request_address[31:4], 4'b0000}; // Word 0
                 if (mem_ready) begin
                     next_refill_buffer[31:0] = mem_rdata;
                     next_state = STATE_FETCH_1;
@@ -132,9 +157,9 @@ module l2_cache (
             end
 
             STATE_FETCH_1: begin
-                mem_req = 1;
+                mem_req = request_read_enable;
                 mem_we = 0;
-                mem_addr = {s_addr[31:4], 4'b0100}; // Word 1
+                mem_addr = {request_address[31:4], 4'b0100}; // Word 1
                 if (mem_ready) begin
                     next_refill_buffer[63:32] = mem_rdata;
                     next_state = STATE_FETCH_2;
@@ -142,9 +167,9 @@ module l2_cache (
             end
 
             STATE_FETCH_2: begin
-                mem_req = 1;
+                mem_req = request_read_enable;
                 mem_we = 0;
-                mem_addr = {s_addr[31:4], 4'b1000}; // Word 2
+                mem_addr = {request_address[31:4], 4'b1000}; // Word 2
                 if (mem_ready) begin
                     next_refill_buffer[95:64] = mem_rdata;
                     next_state = STATE_FETCH_3;
@@ -152,9 +177,9 @@ module l2_cache (
             end
 
             STATE_FETCH_3: begin
-                mem_req = 1;
+                mem_req = request_read_enable;
                 mem_we = 0;
-                mem_addr = {s_addr[31:4], 4'b1100}; // Word 3
+                mem_addr = {request_address[31:4], 4'b1100}; // Word 3
                 if (mem_ready) begin
                     next_refill_buffer[127:96] = mem_rdata;
                     next_state = STATE_UPDATE;
@@ -168,11 +193,11 @@ module l2_cache (
 
             STATE_WRITE: begin
                 // Write-through to memory
-                mem_req = 1;
-                mem_we = 1;
-                mem_addr = s_addr;
-                mem_wdata = s_wdata;
-                mem_be = s_be;
+                mem_req = request_write_enable;
+                mem_we = request_write_enable;
+                mem_addr = request_address;
+                mem_wdata = request_write_data;
+                mem_be = request_byte_enable;
                 
                 if (mem_ready) begin
                     s_ready = 1; // Done
@@ -185,33 +210,33 @@ module l2_cache (
     // Cache Update Logic (Sequential)
     always @(posedge clk) begin
         if (state == STATE_UPDATE) begin
-            valid[index] <= 1;
-            tag_array[index] <= tag;
-            data_array[index] <= refill_buffer;
+            valid[request_index] <= 1;
+            tag_array[request_index] <= request_tag;
+            data_array[request_index] <= refill_buffer;
         end else if (state == STATE_WRITE && mem_ready) begin
             // Update cache on write hit (Write-Update / Write-Through)
-            if (hit) begin
+            if (request_hit) begin
 
-                if (word_offset == 2'b00) begin
-                    if (s_be[0]) data_array[index][7:0]   <= s_wdata[7:0];
-                    if (s_be[1]) data_array[index][15:8]  <= s_wdata[15:8];
-                    if (s_be[2]) data_array[index][23:16] <= s_wdata[23:16];
-                    if (s_be[3]) data_array[index][31:24] <= s_wdata[31:24];
-                end else if (word_offset == 2'b01) begin
-                    if (s_be[0]) data_array[index][39:32] <= s_wdata[7:0];
-                    if (s_be[1]) data_array[index][47:40] <= s_wdata[15:8];
-                    if (s_be[2]) data_array[index][55:48] <= s_wdata[23:16];
-                    if (s_be[3]) data_array[index][63:56] <= s_wdata[31:24];
-                end else if (word_offset == 2'b10) begin
-                    if (s_be[0]) data_array[index][71:64] <= s_wdata[7:0];
-                    if (s_be[1]) data_array[index][79:72] <= s_wdata[15:8];
-                    if (s_be[2]) data_array[index][87:80] <= s_wdata[23:16];
-                    if (s_be[3]) data_array[index][95:88] <= s_wdata[31:24];
-                end else if (word_offset == 2'b11) begin
-                    if (s_be[0]) data_array[index][103:96] <= s_wdata[7:0];
-                    if (s_be[1]) data_array[index][111:104] <= s_wdata[15:8];
-                    if (s_be[2]) data_array[index][119:112] <= s_wdata[23:16];
-                    if (s_be[3]) data_array[index][127:120] <= s_wdata[31:24];
+                if (request_word_offset == 2'b00) begin
+                    if (request_byte_enable[0]) data_array[request_index][7:0]   <= request_write_data[7:0];
+                    if (request_byte_enable[1]) data_array[request_index][15:8]  <= request_write_data[15:8];
+                    if (request_byte_enable[2]) data_array[request_index][23:16] <= request_write_data[23:16];
+                    if (request_byte_enable[3]) data_array[request_index][31:24] <= request_write_data[31:24];
+                end else if (request_word_offset == 2'b01) begin
+                    if (request_byte_enable[0]) data_array[request_index][39:32] <= request_write_data[7:0];
+                    if (request_byte_enable[1]) data_array[request_index][47:40] <= request_write_data[15:8];
+                    if (request_byte_enable[2]) data_array[request_index][55:48] <= request_write_data[23:16];
+                    if (request_byte_enable[3]) data_array[request_index][63:56] <= request_write_data[31:24];
+                end else if (request_word_offset == 2'b10) begin
+                    if (request_byte_enable[0]) data_array[request_index][71:64] <= request_write_data[7:0];
+                    if (request_byte_enable[1]) data_array[request_index][79:72] <= request_write_data[15:8];
+                    if (request_byte_enable[2]) data_array[request_index][87:80] <= request_write_data[23:16];
+                    if (request_byte_enable[3]) data_array[request_index][95:88] <= request_write_data[31:24];
+                end else if (request_word_offset == 2'b11) begin
+                    if (request_byte_enable[0]) data_array[request_index][103:96] <= request_write_data[7:0];
+                    if (request_byte_enable[1]) data_array[request_index][111:104] <= request_write_data[15:8];
+                    if (request_byte_enable[2]) data_array[request_index][119:112] <= request_write_data[23:16];
+                    if (request_byte_enable[3]) data_array[request_index][127:120] <= request_write_data[31:24];
                 end
             end
         end

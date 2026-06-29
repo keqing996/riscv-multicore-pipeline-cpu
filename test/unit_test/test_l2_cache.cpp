@@ -40,9 +40,13 @@ public:
         // Should not be ready (miss)
         CHECK(dut->s_ready == 0);
         CHECK(dut->mem_req == 1);
+
+        // Upstream may change while the cache owns the miss transaction.
+        dut->s_addr = 0x2000;
         
         // Simulate memory responses for cache line fill
         for (int i = 0; i < 4; i++) {
+            CHECK(dut->mem_addr == 0x1000 + static_cast<uint32_t>(i * 4));
             dut->mem_rdata = 0x10000000 + (i << 8);
             dut->mem_ready = 1;
             tick();
@@ -64,6 +68,32 @@ public:
         dut->s_en = 0;
         tick();
     }
+
+    void test_write_request_latches_inputs() {
+        dut->s_addr = 0x3004;
+        dut->s_wdata = 0x12345678;
+        dut->s_be = 0b1111;
+        dut->s_we = 1;
+        dut->s_en = 1;
+        tick();
+
+        CHECK(dut->mem_req == 1);
+        CHECK(dut->mem_we == 1);
+
+        dut->s_addr = 0x4004;
+        dut->s_wdata = 0xDEADBEEF;
+        dut->s_be = 0b0011;
+        CHECK(dut->mem_addr == 0x3004);
+        CHECK(dut->mem_wdata == 0x12345678);
+        CHECK(dut->mem_be == 0b1111);
+
+        dut->mem_ready = 1;
+        tick();
+        dut->mem_ready = 0;
+        dut->s_en = 0;
+        dut->s_we = 0;
+        tick();
+    }
 };
 
 TEST_CASE("L2 Cache") {
@@ -71,4 +101,5 @@ L2CacheTestbench tb;
         
         tb.reset();
         tb.test_read_miss();
+        tb.test_write_request_latches_inputs();
 }
