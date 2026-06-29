@@ -28,20 +28,7 @@ TEST_CASE("Arithmetic Operations Integration Test") {
     tb.load_program(program);
     tb.reset();
 
-    // Run until EBREAK (PC = 0x28 = 40)
-    bool ebreak_reached = false;
-    for (int cycles = 0; cycles < 300; cycles++) {
-        tb.tick();
-        
-        uint32_t pc_ex = tb.get_pc_ex();
-        if (tb.is_halted()) { // EBREAK instruction address
-            ebreak_reached = true;
-            for (int i = 0; i < 10; i++) tb.tick();
-            break;
-        }
-    }
-
-    CHECK(ebreak_reached == true);
+    CHECK(tb.run_until_halted(300));
 
     // Verify Register Values
     CHECK(tb.read_register(1) == 10);

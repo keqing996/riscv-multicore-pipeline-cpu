@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <iomanip>
 
@@ -21,7 +22,7 @@ protected:
     bool trace_enabled;
     
 public:
-    TestbenchBase(bool enable_trace = true, const std::string& trace_filename = "trace.vcd")
+    TestbenchBase(bool enable_trace = false, const std::string& trace_filename = "trace.vcd")
         : sim_time(0), trace_enabled(enable_trace) {
         
         dut = std::make_unique<DUT>();
@@ -79,7 +80,7 @@ protected:
     
 public:
     ClockedTestbench(uint32_t clk_freq_mhz = 100, 
-                     bool enable_trace = true,
+                     bool enable_trace = false,
                      const std::string& trace_filename = "trace.vcd")
         : TestbenchBase<DUT>(enable_trace, trace_filename) {
         

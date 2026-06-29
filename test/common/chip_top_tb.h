@@ -5,12 +5,24 @@
 #include <Vchip_top.h>
 #include <Vchip_top___024root.h>
 
+#include <cstdlib>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+inline bool chip_top_trace_enabled_from_env() {
+    const char* value = std::getenv("TRACE");
+    return value != nullptr && value[0] != '\0' && std::string(value) != "0";
+}
+
+inline std::string chip_top_trace_filename_from_env() {
+    const char* value = std::getenv("TRACE_FILE");
+    return value != nullptr && value[0] != '\0' ? std::string(value) : "chip_top.vcd";
+}
 
 struct ChipTopSnapshot {
     uint32_t pc_if;
@@ -49,7 +61,9 @@ struct ChipTopSnapshot {
 
 class ChipTopTestbench : public ClockedTestbench<Vchip_top> {
 public:
-    ChipTopTestbench(bool enable_trace = true, const std::string& trace_filename = "dump.vcd")
+    ChipTopTestbench(
+        bool enable_trace = chip_top_trace_enabled_from_env(),
+        const std::string& trace_filename = chip_top_trace_filename_from_env())
         : ClockedTestbench<Vchip_top>(100, enable_trace, trace_filename) {
         dut->rst_n = 0;
     }
@@ -86,6 +100,7 @@ public:
                 return true;
             }
         }
+        std::cerr << "Timed out waiting for halt: " << snapshot().to_string() << std::endl;
         return false;
     }
 

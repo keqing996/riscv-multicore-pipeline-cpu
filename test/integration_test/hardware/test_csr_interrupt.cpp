@@ -37,20 +37,7 @@ ChipTopTestbench tb;
     tb.load_program(program);
     tb.reset();
 
-    // Run until EBREAK (interrupt should fire)
-    bool ebreak_reached = false;
-    for (int i = 0; i < 500; i++) {
-        tb.tick();
-        
-        uint32_t pc_ex = tb.get_pc_ex();
-        if (tb.is_halted()) { // EBREAK
-            ebreak_reached = true;
-            for (int j = 0; j < 10; j++) tb.tick();
-            break;
-        }
-    }
-
-    CHECK(ebreak_reached == true);
+    CHECK(tb.run_until_halted(500));
 
     // Verify that interrupt handler executed
     uint32_t x10 = tb.read_register(10);

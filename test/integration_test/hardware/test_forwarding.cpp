@@ -46,20 +46,7 @@ ChipTopTestbench tb;
     tb.load_program(program);
     tb.reset();
 
-    // Run until EBREAK
-    bool ebreak_reached = false;
-    for (int cycles = 0; cycles < 200; cycles++) {
-        tb.tick();
-        
-        uint32_t pc_ex = tb.get_pc_ex();
-        if (tb.is_halted()) { // EBREAK instruction address
-            ebreak_reached = true;
-            for (int i = 0; i < 5; i++) tb.tick();
-            break;
-        }
-    }
-
-    CHECK(ebreak_reached == true);
+    CHECK(tb.run_until_halted(200));
 
     // Check GPR Forwarding Result
     uint32_t x2 = tb.read_register(2);

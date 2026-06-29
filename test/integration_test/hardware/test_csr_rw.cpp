@@ -24,14 +24,7 @@ ChipTopTestbench tb;
     tb.load_program(program);
     tb.reset();
 
-    for (int i = 0; i < 500; i++) {
-        tb.tick();
-        if (tb.is_halted()) {
-            break;
-        }
-    }
-
-    CHECK(tb.is_halted());
+    CHECK(tb.run_until_halted(500));
 
     // Verify Results
     // x2 should be old mtvec (0)

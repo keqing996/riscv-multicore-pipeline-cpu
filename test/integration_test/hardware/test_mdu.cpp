@@ -34,21 +34,7 @@ ChipTopTestbench tb;
     tb.load_program(program);
     tb.reset();
 
-    // Run until EBREAK (PC = 0x1C = 28)
-    // MDU operations take ~32 cycles each. 3 MDU ops = ~100 cycles.
-    bool ebreak_reached = false;
-    for (int cycles = 0; cycles < 1000; cycles++) {
-        tb.tick();
-        
-        uint32_t pc_ex = tb.get_pc_ex();
-        if (tb.is_halted()) { // EBREAK instruction address
-            ebreak_reached = true;
-            for (int i = 0; i < 10; i++) tb.tick();
-            break;
-        }
-    }
-
-    CHECK(ebreak_reached == true);
+    CHECK(tb.run_until_halted(1000));
 
     // Verify Register Values
     CHECK(tb.read_register(3) == 50);
