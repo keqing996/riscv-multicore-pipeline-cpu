@@ -43,6 +43,7 @@ public:
         
         tick();
         // End of Cycle 1: ADDI x1 is latched into ID/EX
+        CHECK(dut->rootp->backend__DOT__id_ex_valid == 1);
         
         // Test 2: Stall Fetch (instruction_grant = 0)
         dut->instruction_grant = 0;
@@ -54,7 +55,9 @@ public:
         // End of Cycle 2: ID/EX should be bubbled (reg_write=0), EX/MEM should have valid instruction
         
         CHECK(dut->rootp->backend__DOT__id_ex_register_write_enable == 0);
+        CHECK(dut->rootp->backend__DOT__id_ex_valid == 0);
         CHECK(dut->rootp->backend__DOT__ex_mem_register_write_enable == 1);
+        CHECK(dut->rootp->backend__DOT__ex_mem_valid == 1);
         CHECK(dut->rootp->backend__DOT__ex_mem_rd_index == 1);
         
         tick();
@@ -62,7 +65,9 @@ public:
         // End of Cycle 3: EX/MEM should now have the bubble, MEM/WB should have ADDI x1
         
         CHECK(dut->rootp->backend__DOT__ex_mem_register_write_enable == 0);
+        CHECK(dut->rootp->backend__DOT__ex_mem_valid == 0);
         CHECK(dut->rootp->backend__DOT__mem_wb_register_write_enable == 1);
+        CHECK(dut->rootp->backend__DOT__mem_wb_valid == 1);
         CHECK(dut->rootp->backend__DOT__mem_wb_rd_index == 1);
         
         // Release Stall
@@ -72,7 +77,32 @@ public:
         // End of Cycle 4: ADDI x2 should now be latched into ID/EX
         
         CHECK(dut->rootp->backend__DOT__id_ex_register_write_enable == 1);
+        CHECK(dut->rootp->backend__DOT__id_ex_valid == 1);
         CHECK(dut->rootp->backend__DOT__id_ex_rd_index == 2);
+    }
+
+    void test_invalid_fetch_does_not_advance() {
+        dut->instruction_grant = 0;
+        dut->if_id_instruction = 0x06300293; // ADDI x5, x0, 99
+        dut->if_id_program_counter = 4;
+
+        tick();
+        eval();
+
+        CHECK(dut->rootp->backend__DOT__id_ex_valid == 0);
+        CHECK(dut->rootp->backend__DOT__id_ex_register_write_enable == 0);
+
+        tick();
+        eval();
+
+        CHECK(dut->rootp->backend__DOT__ex_mem_valid == 0);
+        CHECK(dut->rootp->backend__DOT__ex_mem_register_write_enable == 0);
+
+        tick();
+        eval();
+
+        CHECK(dut->rootp->backend__DOT__mem_wb_valid == 0);
+        CHECK(dut->rootp->backend__DOT__mem_wb_register_write_enable == 0);
     }
 
     void test_data_stall() {
@@ -102,8 +132,11 @@ public:
         
         // Everything should be FROZEN
         CHECK(dut->rootp->backend__DOT__mem_wb_rd_index == 1);
+        CHECK(dut->rootp->backend__DOT__mem_wb_valid == 1);
         CHECK(dut->rootp->backend__DOT__ex_mem_rd_index == 2);
+        CHECK(dut->rootp->backend__DOT__ex_mem_valid == 1);
         CHECK(dut->rootp->backend__DOT__id_ex_rd_index == 3);
+        CHECK(dut->rootp->backend__DOT__id_ex_valid == 1);
         
         // Cycle 5: Release Stall
         dut->bus_busy = 0;
@@ -112,7 +145,9 @@ public:
         
         // Pipeline should advance
         CHECK(dut->rootp->backend__DOT__mem_wb_rd_index == 2);
+        CHECK(dut->rootp->backend__DOT__mem_wb_valid == 1);
         CHECK(dut->rootp->backend__DOT__ex_mem_rd_index == 3);
+        CHECK(dut->rootp->backend__DOT__ex_mem_valid == 1);
     }
 };
 
@@ -124,7 +159,12 @@ BackendTestbench tb;
     tb.setup_inputs();
     tb.test_instruction_stall();
 
-    // Test 2: Data Stall
+    // Test 2: Invalid fetch valid-bit handling
+    tb.do_reset();
+    tb.setup_inputs();
+    tb.test_invalid_fetch_does_not_advance();
+
+    // Test 3: Data Stall
     tb.do_reset();
     tb.setup_inputs();
     tb.test_data_stall();

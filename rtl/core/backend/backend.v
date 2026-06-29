@@ -81,11 +81,12 @@ module backend (
     wire stall_hazard;
     wire mdu_busy; 
     wire mdu_ready;
-    wire mdu_stall = id_ex_is_mdu_operation && !mdu_ready; // Stall until MDU is ready
+    wire mdu_stall = id_ex_valid && id_ex_is_mdu_operation && !mdu_ready; // Stall until MDU is ready
     wire halt_pipeline;
     assign stall_pipeline = stall_hazard || stall_mem_stage || mdu_stall || halt_pipeline; 
 
     // --- ID/EX Pipeline Registers ---
+    reg id_ex_valid;
     // id_ex_program_counter is output
     reg id_ex_prediction_taken;
     reg [31:0] id_ex_prediction_target;
@@ -126,6 +127,7 @@ module backend (
     // branch_target_execute, branch_taken_execute are outputs
 
     // --- EX/MEM Pipeline Registers ---
+    reg ex_mem_valid;
     reg [31:0] ex_mem_alu_result;
     reg [31:0] ex_mem_rs2_data;
     reg [4:0]  ex_mem_rd_index;
@@ -145,6 +147,7 @@ module backend (
     // wire timer_interrupt_request; // Removed wire declaration, now input
 
     // --- MEM/WB Pipeline Registers ---
+    reg mem_wb_valid;
     reg [31:0] mem_wb_read_data;
     reg [31:0] mem_wb_alu_result;
     reg [4:0]  mem_wb_rd_index;
@@ -201,7 +204,7 @@ module backend (
     // Register File
     regfile u_regfile (
         .clk(clk),
-        .write_enable(mem_wb_register_write_enable),
+        .write_enable(mem_wb_valid && mem_wb_register_write_enable),
         .rs1_index(rs1_index_decode),
         .rs2_index(rs2_index_decode),
         .rd_index(mem_wb_rd_index),
@@ -228,14 +231,14 @@ module backend (
         .rst_n(rst_n),
         .hart_id(hart_id), // Added: Hart ID
         .csr_address(id_ex_immediate[11:0]),
-        .csr_write_enable(id_ex_csr_write_enable),
+        .csr_write_enable(id_ex_valid && id_ex_csr_write_enable),
         .csr_write_data(forward_a_value),
         .csr_op(id_ex_function_3),
         .csr_read_data(csr_read_data_execute),
-        .exception_enable(id_ex_is_environment_call),
+        .exception_enable(id_ex_valid && id_ex_is_environment_call),
         .exception_program_counter(id_ex_program_counter),
         .exception_cause(32'd11),
-        .machine_return_enable(id_ex_is_machine_return),
+        .machine_return_enable(id_ex_valid && id_ex_is_machine_return),
         .timer_interrupt_request(timer_interrupt_request),
         .mtvec_out(mtvec),
         .mepc_out(mepc),
@@ -248,13 +251,14 @@ module backend (
         .rs1_index_decode(rs1_index_decode),
         .rs2_index_decode(rs2_index_decode),
         .rd_index_execute(id_ex_rd_index),
-        .memory_read_enable_execute(id_ex_memory_read_enable),
+        .memory_read_enable_execute(id_ex_valid && id_ex_memory_read_enable),
         .stall_pipeline(stall_hazard)
     );
 
     // ID/EX Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            id_ex_valid <= 0;
             id_ex_program_counter <= 0;
             id_ex_prediction_taken <= 0;
             id_ex_prediction_target <= 0;
@@ -285,8 +289,9 @@ module backend (
             id_ex_is_breakpoint <= 0;
         end else if (stall_mem_stage || mdu_stall || halt_pipeline) begin // Stall if MDU is busy/not ready
             // Stall ID/EX (Hold value)
-        end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard || stall_fetch_stage) begin
+        end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap || stall_hazard || stall_fetch_stage) begin
             // Flush ID/EX (Insert Bubble)
+            id_ex_valid <= 0;
             is_branch_execute <= 0;
             is_jump_execute <= 0;
             id_ex_memory_read_enable <= 0;
@@ -303,6 +308,7 @@ module backend (
             id_ex_prediction_target <= 0;
             id_ex_program_counter <= 0; 
         end else begin
+            id_ex_valid <= instruction_grant;
             id_ex_program_counter <= if_id_program_counter;
             id_ex_prediction_taken <= if_id_prediction_taken;
             id_ex_prediction_target <= if_id_prediction_target;
@@ -343,9 +349,9 @@ module backend (
         .rs1_index_execute(id_ex_rs1_index),
         .rs2_index_execute(id_ex_rs2_index),
         .rd_index_memory(ex_mem_rd_index),
-        .register_write_enable_memory(ex_mem_register_write_enable),
+        .register_write_enable_memory(ex_mem_valid && ex_mem_register_write_enable),
         .rd_index_writeback(mem_wb_rd_index),
-        .register_write_enable_writeback(mem_wb_register_write_enable),
+        .register_write_enable_writeback(mem_wb_valid && mem_wb_register_write_enable),
         .forward_a_select(forward_a_select),
         .forward_b_select(forward_b_select)
     );
@@ -386,7 +392,7 @@ module backend (
     mdu u_mdu (
         .clk(clk),
         .rst_n(rst_n),
-        .start(id_ex_is_mdu_operation && !mdu_busy && !mdu_ready), 
+        .start(id_ex_valid && id_ex_is_mdu_operation && !mdu_busy && !mdu_ready), 
         .operation(id_ex_function_3),
         .operand_a(forward_a_value),
         .operand_b(forward_b_value),
@@ -410,15 +416,15 @@ module backend (
         .branch_condition_met(branch_condition_met)
     );
 
-    assign branch_taken_execute = (is_branch_execute && branch_condition_met);
+    assign branch_taken_execute = (id_ex_valid && is_branch_execute && branch_condition_met);
     
     // Jump Logic (JAL/JALR)
     assign jalr_target_execute = (forward_a_value + id_ex_immediate) & 32'hFFFFFFFE;
     
     // Flush signals
-    wire actual_taken = branch_taken_execute || is_jump_execute;
+    wire actual_taken = branch_taken_execute || (id_ex_valid && is_jump_execute);
     wire [31:0] actual_target = (is_jump_execute && is_jalr_execute) ? jalr_target_execute : branch_target_execute;
-    wire is_control_execute = is_branch_execute || is_jump_execute;
+    wire is_control_execute = id_ex_valid && (is_branch_execute || is_jump_execute);
 
     wire mispredict = 
         (is_control_execute && (id_ex_prediction_taken != actual_taken)) || 
@@ -429,7 +435,7 @@ module backend (
 
     assign flush_due_to_branch = mispredict;
     assign flush_due_to_jump   = 0; 
-    assign flush_due_to_trap   = interrupt_enable || is_environment_call_decode || is_machine_return_decode;
+    assign flush_due_to_trap   = interrupt_enable || (id_ex_valid && id_ex_is_environment_call) || (id_ex_valid && id_ex_is_machine_return);
     assign halt_pipeline = halted_reg;
     assign halted = halted_reg;
 
@@ -438,16 +444,17 @@ module backend (
     wire [31:0] mtvec_forwarded;
     wire [31:0] mepc_forwarded;
 
-    assign mtvec_forwarded = (id_ex_csr_write_enable && (csr_write_address_execute == 12'h305)) ? csr_new_value : mtvec;
-    assign mepc_forwarded  = (id_ex_csr_write_enable && (csr_write_address_execute == 12'h341)) ? csr_new_value : mepc;
+    assign mtvec_forwarded = (id_ex_valid && id_ex_csr_write_enable && (csr_write_address_execute == 12'h305)) ? csr_new_value : mtvec;
+    assign mepc_forwarded  = (id_ex_valid && id_ex_csr_write_enable && (csr_write_address_execute == 12'h341)) ? csr_new_value : mepc;
 
     // Trap PC Logic
-    assign trap_pc = (interrupt_enable || is_environment_call_decode) ? mtvec_forwarded : mepc_forwarded;
-    assign pc_mux_select_trap = interrupt_enable || is_environment_call_decode || is_machine_return_decode;
+    assign trap_pc = (interrupt_enable || (id_ex_valid && id_ex_is_environment_call)) ? mtvec_forwarded : mepc_forwarded;
+    assign pc_mux_select_trap = flush_due_to_trap;
 
     // EX/MEM Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            ex_mem_valid <= 0;
             ex_mem_alu_result <= 0;
             ex_mem_rs2_data <= 0;
             ex_mem_rd_index <= 0;
@@ -463,6 +470,7 @@ module backend (
             // Stall EX/MEM (Hold value)
         end else if (mdu_stall) begin
             // Insert Bubble (NOP) while MDU is busy/not ready
+            ex_mem_valid <= 0;
             ex_mem_memory_read_enable <= 0;
             ex_mem_memory_write_enable <= 0;
             ex_mem_register_write_enable <= 0;
@@ -475,6 +483,7 @@ module backend (
             ex_mem_csr_read_data <= 0;
             ex_mem_is_breakpoint <= 0;
         end else begin
+            ex_mem_valid <= id_ex_valid;
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value;
             ex_mem_rd_index <= id_ex_rd_index;
@@ -497,8 +506,8 @@ module backend (
     load_store_unit u_load_store_unit (
         .address(ex_mem_alu_result),
         .write_data_in(ex_mem_rs2_data),
-        .memory_read_enable(ex_mem_memory_read_enable),
-        .memory_write_enable(ex_mem_memory_write_enable),
+        .memory_read_enable(ex_mem_valid && ex_mem_memory_read_enable),
+        .memory_write_enable(ex_mem_valid && ex_mem_memory_write_enable),
         .function_3(ex_mem_function_3),
         .bus_address(bus_address),
         .bus_write_data(bus_write_data),
@@ -512,6 +521,7 @@ module backend (
     // MEM/WB Pipeline Register
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            mem_wb_valid <= 0;
             mem_wb_read_data <= 0;
             mem_wb_alu_result <= 0;
             mem_wb_rd_index <= 0;
@@ -523,6 +533,7 @@ module backend (
         end else if (stall_mem_stage) begin
             // Stall MEM/WB (Hold value)
         end else begin
+            mem_wb_valid <= ex_mem_valid;
             mem_wb_read_data <= memory_read_data_final;
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_rd_index <= ex_mem_rd_index;
@@ -537,7 +548,7 @@ module backend (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             halted_reg <= 0;
-        end else if (mem_wb_is_breakpoint) begin
+        end else if (mem_wb_valid && mem_wb_is_breakpoint) begin
             halted_reg <= 1;
         end
     end
