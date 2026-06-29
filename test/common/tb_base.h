@@ -1,7 +1,9 @@
 #pragma once
 
 #include <verilated.h>
+#if VM_TRACE
 #include <verilated_vcd_c.h>
+#endif
 #include <memory>
 #include <string>
 #include <cstdint>
@@ -17,7 +19,9 @@ template<typename DUT>
 class TestbenchBase {
 protected:
     std::unique_ptr<DUT> dut;
+#if VM_TRACE
     std::unique_ptr<VerilatedVcdC> trace;
+#endif
     uint64_t sim_time;
     bool trace_enabled;
     
@@ -28,27 +32,36 @@ public:
         dut = std::make_unique<DUT>();
         
         if (trace_enabled) {
+#if VM_TRACE
             Verilated::traceEverOn(true);
             trace = std::make_unique<VerilatedVcdC>();
             dut->trace(trace.get(), 99);  // Trace 99 levels deep
             trace->open(trace_filename.c_str());
             std::cout << "Trace file: " << trace_filename << std::endl;
+#else
+            trace_enabled = false;
+            std::cerr << "Trace requested, but this target was built without ENABLE_TRACE." << std::endl;
+#endif
         }
     }
     
     virtual ~TestbenchBase() {
+#if VM_TRACE
         if (trace) {
             trace->close();
         }
+#endif
         dut->final();
     }
     
     // Evaluate the DUT
     void eval() {
         dut->eval();
+#if VM_TRACE
         if (trace) {
             trace->dump(sim_time);
         }
+#endif
         sim_time++;
     }
     
@@ -64,9 +77,11 @@ public:
     
     // Flush trace (useful for debugging crashes)
     void flush_trace() {
+#if VM_TRACE
         if (trace) {
             trace->flush();
         }
+#endif
     }
 };
 

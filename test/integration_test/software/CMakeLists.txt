@@ -21,6 +21,16 @@ if(NOT LLVM_OBJCOPY)
     find_program(LLVM_OBJCOPY llvm-objcopy)
 endif()
 
+find_program(LLVM_OBJDUMP
+    NAMES llvm-objdump
+    PATHS /opt/homebrew/opt/llvm/bin
+    NO_DEFAULT_PATH
+    DOC "LLVM objdump utility")
+
+if(NOT LLVM_OBJDUMP)
+    find_program(LLVM_OBJDUMP llvm-objdump)
+endif()
+
 if(NOT RISCV_CC)
     message(FATAL_ERROR "clang not found. Install with: brew install llvm")
 endif()
@@ -29,8 +39,13 @@ if(NOT LLVM_OBJCOPY)
     message(FATAL_ERROR "llvm-objcopy not found. Install with: brew install llvm")
 endif()
 
+if(NOT LLVM_OBJDUMP)
+    message(FATAL_ERROR "llvm-objdump not found. Install with: brew install llvm")
+endif()
+
 message(STATUS "RISC-V Clang: ${RISCV_CC}")
 message(STATUS "LLVM objcopy: ${LLVM_OBJCOPY}")
+message(STATUS "LLVM objdump: ${LLVM_OBJDUMP}")
 
 # RISC-V compilation flags
 set(RISCV_FLAGS
@@ -51,7 +66,7 @@ function(add_software_test TEST_NAME)
     
     set(ELF_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}.elf)
     set(BIN_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}.bin)
-    set(DIS_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}.S)
+    set(DIS_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}.dump)
     
     # Resolve absolute paths for C sources
     set(ABS_C_SOURCES)
@@ -81,18 +96,18 @@ function(add_software_test TEST_NAME)
         VERBATIM
     )
     
-    # Generate disassembly (optional, for debugging)
+    # Generate disassembly (for debugging software test binaries)
     add_custom_command(
         OUTPUT ${DIS_FILE}
-        COMMAND ${LLVM_OBJCOPY} --version > /dev/null 2>&1 || true
+        COMMAND /bin/sh -c "\"${LLVM_OBJDUMP}\" -d \"${ELF_FILE}\" > \"${DIS_FILE}\""
         DEPENDS ${ELF_FILE}
-        COMMENT "Generating disassembly: ${TEST_NAME}.S"
+        COMMENT "Generating disassembly: ${TEST_NAME}.dump"
         VERBATIM
     )
     
     # Create custom target for binary
     add_custom_target(${TEST_NAME}_program
-        DEPENDS ${BIN_FILE}
+        DEPENDS ${BIN_FILE} ${DIS_FILE}
     )
     
     # Create test executable

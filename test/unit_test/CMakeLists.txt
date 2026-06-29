@@ -28,17 +28,7 @@ function(add_verilog_test)
         SOURCES ${ARG_RTL_FILES}
         TOP_MODULE ${ARG_TOP_MODULE}
         PREFIX V${ARG_TOP_MODULE}
-        VERILATOR_ARGS
-            --trace              # Enable VCD tracing
-            --trace-structs      # Trace struct members
-            --trace-max-array 1024
-            --public             # Make internal signals accessible
-            -Wall                # Enable warnings
-            -Wno-fatal           # Don't make warnings fatal
-            -O3                  # Optimize for speed
-            --x-assign fast
-            --x-initial fast
-            --noassert           # Disable assertions for speed
+        VERILATOR_ARGS ${RISCV_VERILATOR_ARGS}
     )
     
     # Link with common utilities

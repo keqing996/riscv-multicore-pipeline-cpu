@@ -9,6 +9,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Export compile commands for IDE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(ENABLE_TRACE "Build Verilator VCD tracing support" OFF)
+
 # Find Verilator
 find_package(verilator HINTS $ENV{VERILATOR_ROOT} /opt/homebrew)
 if (NOT verilator_FOUND)
@@ -20,6 +22,24 @@ message(STATUS "Found Verilator: ${verilator_DIR}")
 # RTL source directory
 set(RTL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/rtl)
 message(STATUS "RTL directory: ${RTL_DIR}")
+
+set(RISCV_VERILATOR_ARGS
+    --public
+    -Wall
+    -Wno-fatal
+    -O3
+    --x-assign fast
+    --x-initial fast
+    --noassert
+)
+
+if(ENABLE_TRACE)
+    list(APPEND RISCV_VERILATOR_ARGS
+        --trace
+        --trace-structs
+        --trace-max-array 1024
+    )
+endif()
 
 # Enable testing
 enable_testing()

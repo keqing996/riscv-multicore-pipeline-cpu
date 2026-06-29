@@ -80,41 +80,21 @@ set(BACKEND_RTL_FILES
 # Create a shared verilated RTL library for chip_top (for integration tests)
 add_library(verilated_chip_top OBJECT ${CHIP_TOP_RTL_FILES})
 
-verilate(verilated_chip_top
-    SOURCES ${CHIP_TOP_RTL_FILES}
-    TOP_MODULE chip_top
-    PREFIX Vchip_top
-    VERILATOR_ARGS
-        --trace              # Enable VCD tracing
-        --trace-structs      # Trace struct members
-        --trace-max-array 1024
-        --public             # Make internal signals accessible
-        -Wall                # Enable warnings
-        -Wno-fatal           # Don't make warnings fatal
-        -O3                  # Optimize for speed
-        --x-assign fast
-        --x-initial fast
-        --noassert           # Disable assertions for speed
+    verilate(verilated_chip_top
+        SOURCES ${CHIP_TOP_RTL_FILES}
+        TOP_MODULE chip_top
+        PREFIX Vchip_top
+        VERILATOR_ARGS ${RISCV_VERILATOR_ARGS}
 )
 
 # Create a shared verilated RTL library for backend (for backend integration test)
 add_library(verilated_backend OBJECT ${BACKEND_RTL_FILES})
 
-verilate(verilated_backend
-    SOURCES ${BACKEND_RTL_FILES}
-    TOP_MODULE backend
-    PREFIX Vbackend
-    VERILATOR_ARGS
-        --trace
-        --trace-structs
-        --trace-max-array 1024
-        --public
-        -Wall
-        -Wno-fatal
-        -O3
-        --x-assign fast
-        --x-initial fast
-        --noassert
+    verilate(verilated_backend
+        SOURCES ${BACKEND_RTL_FILES}
+        TOP_MODULE backend
+        PREFIX Vbackend
+        VERILATOR_ARGS ${RISCV_VERILATOR_ARGS}
 )
 
 # Add test subdirectories
