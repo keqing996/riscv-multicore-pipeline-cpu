@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module hazard_detection_unit (
     input wire [4:0] rs1_index_decode,      // RS1 address in ID stage
     input wire [4:0] rs2_index_decode,      // RS2 address in ID stage

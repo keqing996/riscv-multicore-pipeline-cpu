@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module backend (
     input wire clk,
     input wire rst_n,

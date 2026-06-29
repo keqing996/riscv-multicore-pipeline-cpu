@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module l1_inst_cache (
     input wire clk,
     input wire rst_n,
@@ -159,6 +161,12 @@ module l1_inst_cache (
 
             STATE_UPDATE: begin
                 stall_cpu = 1;
+                next_state = STATE_IDLE;
+            end
+
+            default: begin
+                stall_cpu = 1;
+                instruction_memory_request = 0;
                 next_state = STATE_IDLE;
             end
         endcase

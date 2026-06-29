@@ -204,6 +204,13 @@ module l2_cache (
                     next_state = STATE_IDLE;
                 end
             end
+
+            default: begin
+                mem_req = 0;
+                mem_we = 0;
+                s_ready = 0;
+                next_state = STATE_IDLE;
+            end
         endcase
     end
 

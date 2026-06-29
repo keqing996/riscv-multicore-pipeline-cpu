@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module branch_unit (
     input wire [2:0] function_3,
     input wire [31:0] operand_a,

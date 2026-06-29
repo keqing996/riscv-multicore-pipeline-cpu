@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module alu_control_unit (
     input wire [2:0] alu_operation_code,    // From Main Control (Extended to 3 bits)
     input wire [2:0] function_3,

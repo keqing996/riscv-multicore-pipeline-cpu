@@ -110,6 +110,10 @@ module bus_arbiter (
                     end
                 end
             end
+
+            default: begin
+                next_owner = OWNER_NONE;
+            end
         endcase
     end
 

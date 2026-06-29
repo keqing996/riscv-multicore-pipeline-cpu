@@ -151,6 +151,8 @@ module chip_top (
     wire        l2_mem_req;
     wire [31:0] l2_mem_rdata;
     wire        l2_mem_ready;
+    wire [31:0] unused_icache_mem_rdata;
+    wire        unused_icache_mem_ready;
 
     // L2 Cache
     l2_cache u_l2_cache (
@@ -183,8 +185,8 @@ module chip_top (
         // Port A (Unused)
         .icache_mem_addr(32'b0),
         .icache_mem_req(1'b0),
-        .icache_mem_rdata(),
-        .icache_mem_ready(),
+        .icache_mem_rdata(unused_icache_mem_rdata),
+        .icache_mem_ready(unused_icache_mem_ready),
         // Port B (Connected to L2)
         .dcache_mem_addr(l2_mem_addr),
         .dcache_mem_wdata(l2_mem_wdata),

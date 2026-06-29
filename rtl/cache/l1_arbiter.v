@@ -117,6 +117,10 @@ module l1_arbiter (
                     next_state = STATE_IDLE;
                 end
             end
+
+            default: begin
+                next_state = STATE_IDLE;
+            end
         endcase
     end
 

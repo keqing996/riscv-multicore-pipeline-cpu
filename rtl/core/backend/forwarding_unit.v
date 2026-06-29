@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module forwarding_unit (
     input wire [4:0] rs1_index_execute,      // RS1 address in EX stage
     input wire [4:0] rs2_index_execute,      // RS2 address in EX stage

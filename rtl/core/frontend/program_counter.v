@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module program_counter (
     input wire clk,
     input wire rst_n,      // Active low reset

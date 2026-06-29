@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module load_store_unit (
     // Inputs from Pipeline
     input wire [31:0] address,          // ALU Result (Memory Address)

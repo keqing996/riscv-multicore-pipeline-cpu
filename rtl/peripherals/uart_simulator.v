@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module uart_simulator (
     input wire clk,
     input wire write_enable,

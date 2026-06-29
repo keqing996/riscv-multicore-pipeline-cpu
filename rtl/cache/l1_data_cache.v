@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module l1_data_cache (
     input wire clk,
     input wire rst_n,
@@ -209,6 +211,13 @@ module l1_data_cache (
 
             STATE_ACCESS_DONE: begin
                 stall_cpu = 0;
+                next_state = STATE_IDLE;
+            end
+
+            default: begin
+                stall_cpu = 1;
+                mem_request = 0;
+                mem_write_enable = 0;
                 next_state = STATE_IDLE;
             end
         endcase

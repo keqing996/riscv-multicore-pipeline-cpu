@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module control_status_register_file (
     input wire clk,
     input wire rst_n,
@@ -116,6 +118,9 @@ module control_status_register_file (
                     CSR_MTVEC:   mtvec   <= new_csr_value;
                     CSR_MEPC:    mepc    <= new_csr_value;
                     CSR_MCAUSE:  mcause  <= new_csr_value;
+                    default: begin
+                        // Unknown CSR writes are ignored.
+                    end
                 endcase
             end
         end
