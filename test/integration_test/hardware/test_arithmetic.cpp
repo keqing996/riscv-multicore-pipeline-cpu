@@ -3,73 +3,8 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
-#include "tb_base.h"
-#include "tb_base.h"
-#include <Vchip_top.h>
-#include <Vchip_top___024root.h>
+#include "chip_top_tb.h"
 
-class ChipTopTestbench : public ClockedTestbench<Vchip_top> {
-public:
-    ChipTopTestbench() : ClockedTestbench<Vchip_top>(100, true, "dump.vcd") {
-        dut->rst_n = 0;
-    }
-
-    void set_clk(uint8_t value) override {
-        dut->clk = value;
-    }
-
-    void load_program(const std::vector<uint32_t>& program) {
-        for (size_t i = 0; i < program.size(); i++) {
-            dut->rootp->chip_top__DOT__u_memory_subsystem__DOT__u_main_memory__DOT__memory[i] = program[i];
-        }
-    }
-
-    uint32_t read_register(int reg_idx) {
-        if (reg_idx < 0 || reg_idx >= 32) return 0;
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__u_regfile__DOT__registers[reg_idx];
-    }
-
-    uint32_t read_register_tile1(int reg_idx) {
-        if (reg_idx < 0 || reg_idx >= 32) return 0;
-        return dut->rootp->chip_top__DOT__u_tile_1__DOT__u_core__DOT__u_backend__DOT__u_regfile__DOT__registers[reg_idx];
-    }
-
-    uint32_t get_pc_ex() {
-        // Try accessing the wire in core first, as it connects backend output to frontend
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__id_ex_program_counter;
-    }
-
-    uint32_t get_pc_ex_tile1() {
-        return dut->rootp->chip_top__DOT__u_tile_1__DOT__u_core__DOT__id_ex_program_counter;
-    }
-
-    bool is_halted() {
-        return dut->halted_out;
-    }
-
-    uint32_t get_stall() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__stall_pipeline;
-    }
-
-    uint32_t get_grant() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__instruction_grant_reg;
-    }
-
-    uint32_t get_if_id_pc() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__if_id_program_counter;
-    }
-
-    uint32_t get_instr() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__instruction;
-    }
-
-    void do_reset() {
-        dut->rst_n = 0;
-        for (int i = 0; i < 20; i++) tick();
-        dut->rst_n = 1;
-        for (int i = 0; i < 5; i++) tick();
-    }
-};
 
 TEST_CASE("Arithmetic Operations Integration Test") {
     ChipTopTestbench tb;
@@ -91,7 +26,7 @@ TEST_CASE("Arithmetic Operations Integration Test") {
     };
 
     tb.load_program(program);
-    tb.do_reset();
+    tb.reset();
 
     // Run until EBREAK (PC = 0x28 = 40)
     bool ebreak_reached = false;

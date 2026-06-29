@@ -1,65 +1,19 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
-#include "tb_base.h"
-#include "program_loader.h"
-#include <Vchip_top.h>
-#include <Vchip_top___024root.h>
+#include "chip_top_tb.h"
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 
-class FibonacciTestbench : public ClockedTestbench<Vchip_top> {
-public:
-    FibonacciTestbench() : ClockedTestbench<Vchip_top>(100, false, "dump.vcd") {  // Disable tracing
-        dut->rst_n = 0;
-    }
-
-    void set_clk(uint8_t value) override { 
-        dut->clk = value; 
-    }
-    
-    void load_program(const std::string& bin_path) {
-        auto program = ProgramLoader::load_binary(bin_path);
-        
-        for (size_t i = 0; i < program.size(); i++) {
-            dut->rootp->chip_top__DOT__u_memory_subsystem__DOT__u_main_memory__DOT__memory[i] = program[i];
-        }
-        
-        printf("Loaded %zu instructions into memory\n", program.size());
-    }
-    
-    uint32_t read_reg(int idx) {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__u_regfile__DOT__registers[idx];
-    }
-    
-    uint32_t get_pc() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__id_ex_program_counter;
-    }
-    
-    uint32_t get_instruction() {
-        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__if_id_instruction;
-    }
-    
-    bool is_ebreak() {
-        return dut->halted_out;
-    }
-    
-    void do_reset() {
-        dut->rst_n = 0;
-        for (int i = 0; i < 20; i++) tick();
-        dut->rst_n = 1;
-        for (int i = 0; i < 5; i++) tick();
-    }
-};
 
 TEST_CASE("Fibonacci") {
-FibonacciTestbench tb;
+ChipTopTestbench tb;
     
     // Load program binary
-    tb.load_program(PROGRAM_BIN_PATH);
+    tb.load_binary(PROGRAM_BIN_PATH);
     
     // Reset
-    tb.do_reset();
+    tb.reset();
     
     // Run until EBREAK (max 200k cycles)
     bool found_ebreak = false;
