@@ -29,7 +29,8 @@ module frontend (
     output reg [31:0] if_id_program_counter,
     output reg [31:0] if_id_instruction,
     output reg if_id_prediction_taken,
-    output reg [31:0] if_id_prediction_target
+    output reg [31:0] if_id_prediction_target,
+    output reg if_id_valid
 );
 
     // =========================================================================
@@ -100,21 +101,33 @@ module frontend (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             if_id_program_counter <= 0;
-            if_id_instruction <= 0; // NOP
+            if_id_instruction <= 32'h00000013; // NOP
             if_id_prediction_taken <= 0;
             if_id_prediction_target <= 0;
+            if_id_valid <= 0;
         end else if (flush_due_to_branch || flush_due_to_jump || flush_due_to_trap) begin
             if_id_program_counter <= 0;
-            if_id_instruction <= 0; // Flush -> NOP
+            if_id_instruction <= 32'h00000013; // Flush -> NOP
             if_id_prediction_taken <= 0;
             if_id_prediction_target <= 0;
-        end else if (!stall_global) begin
+            if_id_valid <= 0;
+        end else if (stall_backend) begin
+            // Backend cannot consume IF/ID yet, so keep the current entry.
+        end else if (stall_fetch_stage) begin
+            // Backend consumed the existing IF/ID entry, but fetch cannot
+            // provide a replacement this cycle.
+            if_id_program_counter <= 0;
+            if_id_instruction <= 32'h00000013;
+            if_id_prediction_taken <= 0;
+            if_id_prediction_target <= 0;
+            if_id_valid <= 0;
+        end else begin
             if_id_program_counter <= program_counter_current;
             if_id_instruction <= fetch_stage_instruction;
             if_id_prediction_taken <= prediction_taken;
             if_id_prediction_target <= prediction_target;
+            if_id_valid <= 1;
         end
-        // If stall, hold value
     end
 
 endmodule

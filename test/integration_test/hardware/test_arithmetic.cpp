@@ -43,6 +43,10 @@ public:
         return dut->rootp->chip_top__DOT__u_tile_1__DOT__u_core__DOT__id_ex_program_counter;
     }
 
+    bool is_halted() {
+        return dut->halted_out;
+    }
+
     uint32_t get_stall() {
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__stall_pipeline;
     }
@@ -95,7 +99,7 @@ TEST_CASE("Arithmetic Operations Integration Test") {
         tb.tick();
         
         uint32_t pc_ex = tb.get_pc_ex();
-        if (pc_ex == 40) { // EBREAK instruction address
+        if (tb.is_halted()) { // EBREAK instruction address
             ebreak_reached = true;
             for (int i = 0; i < 10; i++) tb.tick();
             break;

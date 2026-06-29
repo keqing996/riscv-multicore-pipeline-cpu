@@ -53,7 +53,7 @@ public:
     }
     
     bool is_ebreak() {
-        return (get_instruction() & 0xFFFFFFFF) == 0x00100073;
+        return dut->halted_out;
     }
     
     void do_reset() {
@@ -75,6 +75,7 @@ CsrTestbench tb;
     
     bool trap_handler_hit = false;
     bool ecall_return_hit = false;
+    bool mcause_seen_correct = false;
     
     // Run for max 5000 cycles
     for (int i = 0; i < 5000; i++) {
@@ -87,18 +88,13 @@ CsrTestbench tb;
         if (s11 == 0xCAFEBABE && !trap_handler_hit) {
             printf("Cycle %d: Trap Handler Hit! (s11=0xCAFEBABE)\n", i);
             trap_handler_hit = true;
-            
-            uint32_t s2 = tb.read_reg(18); // s2 (read from mcause)
+        }
+
+        uint32_t s2 = tb.read_reg(18); // s2 (read from mcause)
+        if (trap_handler_hit && s2 == 11 && !mcause_seen_correct) {
             uint32_t mcause = tb.get_mcause();
-            
-            printf("Cycle %d: s2 (from mcause) = %u, mcause_reg = %u\n", i, s2, mcause);
-            
-            if (s2 == 11) {
-                printf("Cycle %d: MCAUSE is correct (11 = ECALL)\n", i);
-            } else {
-                fprintf(stderr, "FAIL: MCAUSE incorrect. Expected 11, got %u\n", s2);
-                REQUIRE(s2 == 11);
-            }
+            printf("Cycle %d: MCAUSE is correct (s2=%u, mcause_reg=%u)\n", i, s2, mcause);
+            mcause_seen_correct = true;
         }
         
         // Check if we returned from trap (s4 = 0x12345678)
@@ -117,6 +113,13 @@ CsrTestbench tb;
     if (!ecall_return_hit) {
         fprintf(stderr, "FAIL: Did not return from trap handler\n");
         REQUIRE(ecall_return_hit == true);
+    }
+
+    if (!mcause_seen_correct) {
+        uint32_t s2 = tb.read_reg(18);
+        uint32_t mcause = tb.get_mcause();
+        fprintf(stderr, "FAIL: MCAUSE incorrect. Expected 11, got s2=%u, mcause_reg=%u\n", s2, mcause);
+        REQUIRE(s2 == 11);
     }
     
     printf("PASS: CSR Exception Test Passed!\n");

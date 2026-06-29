@@ -48,6 +48,10 @@ public:
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__id_ex_program_counter;
     }
 
+    bool is_halted() {
+        return dut->halted_out;
+    }
+
     uint32_t get_pc_if() {
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__program_counter_current;
     }
@@ -149,7 +153,7 @@ ChipTopTestbench tb;
             printf("[DEBUG] Cycle %d: PC_IF=0x%x PC_ID=0x%x(0x%x) PC_EX=0x%x grant=%d stall_g=%d icache_inst=0x%x\n", 
                    cycles, pc_if, pc_id, inst_id, pc_ex, inst_grant, stall_glob, icache_inst);
         }
-        if (pc_ex == 24) { // EBREAK instruction address
+        if (tb.is_halted()) { // EBREAK instruction address
             printf("[TB] EBREAK Executed at cycle %d\n", cycles);
             ebreak_reached = true;
             // Wait for pipeline to flush

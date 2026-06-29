@@ -42,6 +42,10 @@ public:
     uint32_t get_pc_ex() {
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__id_ex_program_counter;
     }
+
+    bool is_halted() {
+        return dut->halted_out;
+    }
     void do_reset() {
         dut->rst_n = 0;
         for (int i = 0; i < 20; i++) tick();
@@ -77,7 +81,7 @@ ChipTopTestbench tb;
         tb.tick();
         
         uint32_t pc_ex = tb.get_pc_ex();
-        if (pc_ex == 0x28) { // EBREAK
+        if (tb.is_halted()) { // EBREAK
             ebreak_reached = true;
             // Wait for writeback
             tb.tick();

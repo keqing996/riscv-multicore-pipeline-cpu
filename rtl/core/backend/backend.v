@@ -38,7 +38,8 @@ module backend (
     output reg is_branch_execute, // id_ex_branch
     output reg is_jump_execute,   // id_ex_jump
     output reg is_jalr_execute,   // id_ex_is_jalr
-    output wire [31:0] jalr_target_execute
+    output wire [31:0] jalr_target_execute,
+    output wire halted
 );
 
     // =========================================================================
@@ -72,6 +73,7 @@ module backend (
     wire is_environment_call_decode;
     wire is_mdu_operation_decode; // New wire
     wire is_jalr_decode = (opcode == 7'b1100111);
+    wire is_breakpoint_decode = (if_id_instruction == 32'h00100073);
 
     // Hazard / Stall Signals
     wire stall_fetch_stage = !instruction_grant;
@@ -80,7 +82,8 @@ module backend (
     wire mdu_busy; 
     wire mdu_ready;
     wire mdu_stall = id_ex_is_mdu_operation && !mdu_ready; // Stall until MDU is ready
-    assign stall_pipeline = stall_hazard || stall_mem_stage || mdu_stall; 
+    wire halt_pipeline;
+    assign stall_pipeline = stall_hazard || stall_mem_stage || mdu_stall || halt_pipeline; 
 
     // --- ID/EX Pipeline Registers ---
     // id_ex_program_counter is output
@@ -109,6 +112,7 @@ module backend (
     reg id_ex_is_machine_return;
     reg id_ex_is_environment_call;
     reg id_ex_is_mdu_operation; // New register
+    reg id_ex_is_breakpoint;
 
     // --- EX Stage Signals ---
     wire [31:0] alu_result_execute;
@@ -134,6 +138,7 @@ module backend (
     reg ex_mem_register_write_enable;
     reg ex_mem_csr_to_register_select;
     reg [31:0] ex_mem_csr_read_data;
+    reg ex_mem_is_breakpoint;
 
     // --- MEM Stage Signals ---
     wire [31:0] memory_read_data_final;
@@ -149,9 +154,11 @@ module backend (
     reg mem_wb_memory_to_register_select;
     reg mem_wb_register_write_enable;
     reg mem_wb_csr_to_register_select;
+    reg mem_wb_is_breakpoint;
 
     // --- WB Stage Signals ---
     wire [31:0] write_data_writeback;
+    reg halted_reg;
 
     // =========================================================================
     // ID Stage
@@ -275,9 +282,10 @@ module backend (
             id_ex_is_environment_call <= 0;
             is_jalr_execute <= 0;
             id_ex_is_mdu_operation <= 0; // Reset
-        end else if (stall_mem_stage || mdu_stall) begin // Stall if MDU is busy/not ready
+            id_ex_is_breakpoint <= 0;
+        end else if (stall_mem_stage || mdu_stall || halt_pipeline) begin // Stall if MDU is busy/not ready
             // Stall ID/EX (Hold value)
-        end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard) begin
+        end else if (flush_due_to_branch || flush_due_to_jump || stall_hazard || stall_fetch_stage) begin
             // Flush ID/EX (Insert Bubble)
             is_branch_execute <= 0;
             is_jump_execute <= 0;
@@ -289,6 +297,7 @@ module backend (
             id_ex_is_environment_call <= 0;
             is_jalr_execute <= 0;
             id_ex_is_mdu_operation <= 0; // Flush
+            id_ex_is_breakpoint <= 0;
             
             id_ex_prediction_taken <= 0;
             id_ex_prediction_target <= 0;
@@ -321,6 +330,7 @@ module backend (
             id_ex_is_environment_call <= is_environment_call_decode;
             is_jalr_execute <= is_jalr_decode;
             id_ex_is_mdu_operation <= is_mdu_operation_decode; // Assign
+            id_ex_is_breakpoint <= is_breakpoint_decode;
         end
     end
 
@@ -420,6 +430,8 @@ module backend (
     assign flush_due_to_branch = mispredict;
     assign flush_due_to_jump   = 0; 
     assign flush_due_to_trap   = interrupt_enable || is_environment_call_decode || is_machine_return_decode;
+    assign halt_pipeline = halted_reg;
+    assign halted = halted_reg;
 
     // CSR Forwarding Logic
     wire [11:0] csr_write_address_execute = id_ex_immediate[11:0];
@@ -446,6 +458,7 @@ module backend (
             ex_mem_register_write_enable <= 0;
             ex_mem_csr_to_register_select <= 0;
             ex_mem_csr_read_data <= 0;
+            ex_mem_is_breakpoint <= 0;
         end else if (stall_mem_stage) begin
             // Stall EX/MEM (Hold value)
         end else if (mdu_stall) begin
@@ -460,6 +473,7 @@ module backend (
             ex_mem_function_3 <= 0;
             ex_mem_memory_to_register_select <= 0;
             ex_mem_csr_read_data <= 0;
+            ex_mem_is_breakpoint <= 0;
         end else begin
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value;
@@ -471,6 +485,7 @@ module backend (
             ex_mem_register_write_enable <= id_ex_register_write_enable;
             ex_mem_csr_to_register_select <= id_ex_csr_to_register_select;
             ex_mem_csr_read_data <= csr_read_data_execute;
+            ex_mem_is_breakpoint <= id_ex_is_breakpoint;
         end
     end
 
@@ -504,6 +519,7 @@ module backend (
             mem_wb_register_write_enable <= 0;
             mem_wb_csr_to_register_select <= 0;
             mem_wb_csr_read_data <= 0;
+            mem_wb_is_breakpoint <= 0;
         end else if (stall_mem_stage) begin
             // Stall MEM/WB (Hold value)
         end else begin
@@ -514,6 +530,15 @@ module backend (
             mem_wb_register_write_enable <= ex_mem_register_write_enable;
             mem_wb_csr_to_register_select <= ex_mem_csr_to_register_select;
             mem_wb_csr_read_data <= ex_mem_csr_read_data;
+            mem_wb_is_breakpoint <= ex_mem_is_breakpoint;
+        end
+    end
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            halted_reg <= 0;
+        end else if (mem_wb_is_breakpoint) begin
+            halted_reg <= 1;
         end
     end
 

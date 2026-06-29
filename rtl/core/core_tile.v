@@ -13,14 +13,17 @@ module core_tile (
     input wire         bus_ready,
 
     // Interrupts
-    input wire         timer_irq
+    input wire         timer_irq,
+
+    // Debug / simulation status
+    output wire        halted
 );
 
     // Internal Signals
     wire [31:0] pc_addr;
     wire [31:0] instruction;
     wire        icache_stall;
-    reg         instruction_grant_reg;
+    wire        instruction_grant_reg;
     
     wire [31:0] core_bus_addr;
     wire [31:0] core_bus_wdata;
@@ -45,14 +48,7 @@ module core_tile (
     wire [31:0] dcache_mem_rdata;
     wire        dcache_mem_ready;
 
-    // Break combinational loop: register the instruction_grant signal
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            instruction_grant_reg <= 1'b0; // Start with no grant, will update after reset
-        end else begin
-            instruction_grant_reg <= !icache_stall;
-        end
-    end
+    assign instruction_grant_reg = !icache_stall;
 
     // Core Instance
     core u_core (
@@ -60,7 +56,7 @@ module core_tile (
         .rst_n(rst_n),
         .hart_id(hart_id),
         .instruction(instruction),
-        .instruction_grant(instruction_grant_reg), // Use registered signal
+        .instruction_grant(instruction_grant_reg),
         .program_counter_address(pc_addr),
         
         // Data Interface (to D-Cache)
@@ -72,7 +68,8 @@ module core_tile (
         .bus_read_data(core_bus_rdata),
         .bus_busy(dcache_stall), // Stall when D-Cache is busy (miss or write-through)
         
-        .timer_interrupt_request(timer_irq)
+        .timer_interrupt_request(timer_irq),
+        .halted(halted)
     );
 
     // Instruction Cache

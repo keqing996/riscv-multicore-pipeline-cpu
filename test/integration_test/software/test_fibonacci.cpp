@@ -41,7 +41,7 @@ public:
     }
     
     bool is_ebreak() {
-        return (get_instruction() & 0xFFFFFFFF) == 0x00100073;
+        return dut->halted_out;
     }
     
     void do_reset() {

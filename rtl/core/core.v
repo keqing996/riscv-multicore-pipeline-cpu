@@ -14,7 +14,8 @@ module core (
     output wire        bus_read_enable,
     input  wire [31:0] bus_read_data,
     input  wire        bus_busy,
-    input  wire        timer_interrupt_request
+    input  wire        timer_interrupt_request,
+    output wire        halted
 );
 
     // =========================================================================
@@ -34,6 +35,7 @@ module core (
     wire [31:0] if_id_instruction;
     wire if_id_prediction_taken;
     wire [31:0] if_id_prediction_target;
+    wire if_id_valid;
 
     wire [31:0] id_ex_program_counter;
     wire branch_taken_execute;
@@ -69,7 +71,8 @@ module core (
         .if_id_program_counter(if_id_program_counter),
         .if_id_instruction(if_id_instruction),
         .if_id_prediction_taken(if_id_prediction_taken),
-        .if_id_prediction_target(if_id_prediction_target)
+        .if_id_prediction_target(if_id_prediction_target),
+        .if_id_valid(if_id_valid)
     );
 
     // =========================================================================
@@ -84,7 +87,7 @@ module core (
         .if_id_instruction(if_id_instruction),
         .if_id_prediction_taken(if_id_prediction_taken),
         .if_id_prediction_target(if_id_prediction_target),
-        .instruction_grant(instruction_grant),
+        .instruction_grant(if_id_valid),
         .bus_address(bus_address),
         .bus_write_data(bus_write_data),
         .bus_byte_enable(bus_byte_enable),
@@ -106,7 +109,8 @@ module core (
         .is_branch_execute(is_branch_execute),
         .is_jump_execute(is_jump_execute),
         .is_jalr_execute(is_jalr_execute),
-        .jalr_target_execute(jalr_target_execute)
+        .jalr_target_execute(jalr_target_execute),
+        .halted(halted)
     );
 
 endmodule

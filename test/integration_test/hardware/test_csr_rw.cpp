@@ -36,6 +36,10 @@ public:
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__u_control_status_register_file__DOT__mtvec;
     }
 
+    bool is_halted() {
+        return dut->halted_out;
+    }
+
     void do_reset() {
         dut->rst_n = 0;
         for (int i = 0; i < 20; i++) tick();
@@ -53,18 +57,20 @@ ChipTopTestbench tb;
         0x05500193, // ADDI x3, x0, 0x55
         0x3051a273, // CSRRS x4, mtvec, x3
         0x3051b2f3, // CSRRC x5, mtvec, x3
-        0x00000013, // NOP
-        0x00000013, // NOP
-        0x00000013, // NOP
+        0x00100073, // EBREAK
     };
 
     tb.load_program(program);
     tb.do_reset();
 
-    // Run for enough cycles
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 500; i++) {
         tb.tick();
+        if (tb.is_halted()) {
+            break;
+        }
     }
+
+    CHECK(tb.is_halted());
 
     // Verify Results
     // x2 should be old mtvec (0)

@@ -5,7 +5,8 @@ module chip_top (
     input wire rst_n,
     output wire [31:0] pc_out,
     output wire [31:0] instr_out,
-    output wire [31:0] alu_res_out
+    output wire [31:0] alu_res_out,
+    output wire halted_out
 );
 
     // Bus Signals
@@ -56,6 +57,8 @@ module chip_top (
 
     // Interrupts
     wire timer_irq;
+    wire halted_0;
+    wire halted_1;
 
     // Core Tile 0 (Hart 0)
     core_tile u_tile_0 (
@@ -69,7 +72,8 @@ module chip_top (
         .bus_req(m0_req),
         .bus_rdata(m0_rdata),
         .bus_ready(m0_ready),
-        .timer_irq(timer_irq)
+        .timer_irq(timer_irq),
+        .halted(halted_0)
     );
 
     // Core Tile 1 (Hart 1)
@@ -84,7 +88,8 @@ module chip_top (
         .bus_req(m1_req),
         .bus_rdata(m1_rdata),
         .bus_ready(m1_ready),
-        .timer_irq(timer_irq)
+        .timer_irq(timer_irq),
+        .halted(halted_1)
     );
 
     // Bus Interconnect
@@ -216,5 +221,6 @@ module chip_top (
     assign pc_out = u_tile_0.pc_addr;
     assign instr_out = u_tile_0.instruction;
     assign alu_res_out = u_tile_0.u_core.u_backend.alu_result_execute;
+    assign halted_out = halted_0;
 
 endmodule
