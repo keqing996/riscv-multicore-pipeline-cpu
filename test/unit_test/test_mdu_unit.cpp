@@ -2,6 +2,7 @@
 #include "doctest.h"
 #include "tb_base.h"
 #include "Vmdu.h"
+#include <stdexcept>
 
 // MDU Operations
 #define OP_MUL    0b000
@@ -59,6 +60,35 @@ public:
         
         return dut->result;
     }
+
+    uint32_t run_operation_with_live_input_changes(uint8_t op, uint32_t a, uint32_t b) {
+        dut->operation = op;
+        dut->operand_a = a;
+        dut->operand_b = b;
+        dut->start = 1;
+        tick();
+
+        CHECK(dut->busy == 1);
+
+        dut->operation = OP_MUL;
+        dut->operand_a = 0xDEADBEEF;
+        dut->operand_b = 0xBAD0CAFE;
+        dut->start = 1;
+        tick();
+
+        dut->start = 0;
+
+        int timeout = 100;
+        while (!dut->ready && timeout-- > 0) {
+            tick();
+        }
+
+        if (timeout <= 0) {
+            throw std::runtime_error("MDU operation timeout after input mutation");
+        }
+
+        return dut->result;
+    }
     
     void test_multiply() {
         
@@ -73,6 +103,14 @@ public:
         // MUL large numbers
         res = run_operation(OP_MUL, 1000, 2000);
         CHECK(res == 2000000);
+
+        // MULHU high half of unsigned product
+        res = run_operation(OP_MULHU, 0xFFFFFFFF, 0xFFFFFFFF);
+        CHECK(res == 0xFFFFFFFE);
+
+        // MULHSU high half of signed x unsigned product
+        res = run_operation(OP_MULHSU, 0xFFFFFFFF, 2);
+        CHECK(res == 0xFFFFFFFF);
     }
     
     void test_divide() {
@@ -88,6 +126,10 @@ public:
         // DIV by 0 (should return -1 per RISC-V spec)
         res = run_operation(OP_DIV, 100, 0);
         CHECK(static_cast<int32_t>(res) == -1);
+
+        // DIV overflow (INT_MIN / -1) returns INT_MIN per RISC-V spec
+        res = run_operation(OP_DIV, 0x80000000, 0xFFFFFFFF);
+        CHECK(res == 0x80000000);
     }
     
     void test_remainder() {
@@ -99,6 +141,14 @@ public:
         // REM by 0 (should return dividend per RISC-V spec)
         res = run_operation(OP_REM, 123, 0);
         CHECK(res == 123);
+
+        // REM overflow (INT_MIN % -1) returns 0 per RISC-V spec
+        res = run_operation(OP_REM, 0x80000000, 0xFFFFFFFF);
+        CHECK(res == 0);
+
+        // Signed remainder follows the dividend sign
+        res = run_operation(OP_REM, 0xFFFFFF9C, 7);
+        CHECK(static_cast<int32_t>(res) == -2);
     }
     
     void test_unsigned_operations() {
@@ -110,6 +160,18 @@ public:
         // REMU (unsigned remainder)
         res = run_operation(OP_REMU, 0xFFFFFFFF, 10);
         CHECK(res == 5);
+
+        // Unsigned divide/remainder by 0
+        res = run_operation(OP_DIVU, 0x12345678, 0);
+        CHECK(res == 0xFFFFFFFF);
+
+        res = run_operation(OP_REMU, 0x12345678, 0);
+        CHECK(res == 0x12345678);
+    }
+
+    void test_input_latching() {
+        uint32_t res = run_operation_with_live_input_changes(OP_DIVU, 0xFFFFFFFF, 2);
+        CHECK(res == 0x7FFFFFFF);
     }
 };
 
@@ -121,4 +183,5 @@ MDUTestbench tb;
         tb.test_divide();
         tb.test_remainder();
         tb.test_unsigned_operations();
+        tb.test_input_latching();
 }
