@@ -225,6 +225,15 @@ module backend (
     wire [31:0] mepc;
     wire interrupt_enable;
     wire [31:0] csr_new_value; // Forwarding signal
+    wire trap_valid;
+    wire [31:0] trap_cause;
+    wire [31:0] trap_event_pc;
+    wire mret_valid;
+
+    assign trap_valid = interrupt_enable || (id_ex_valid && id_ex_is_environment_call);
+    assign trap_cause = interrupt_enable ? 32'h80000007 : 32'd11;
+    assign trap_event_pc = id_ex_program_counter;
+    assign mret_valid = id_ex_valid && id_ex_is_machine_return;
     
     control_status_register_file u_control_status_register_file (
         .clk(clk),
@@ -235,10 +244,10 @@ module backend (
         .csr_write_data(forward_a_value),
         .csr_op(id_ex_function_3),
         .csr_read_data(csr_read_data_execute),
-        .exception_enable(id_ex_valid && id_ex_is_environment_call),
-        .exception_program_counter(id_ex_program_counter),
-        .exception_cause(32'd11),
-        .machine_return_enable(id_ex_valid && id_ex_is_machine_return),
+        .exception_enable(trap_valid),
+        .exception_program_counter(trap_event_pc),
+        .exception_cause(trap_cause),
+        .machine_return_enable(mret_valid),
         .timer_interrupt_request(timer_interrupt_request),
         .mtvec_out(mtvec),
         .mepc_out(mepc),
@@ -435,7 +444,7 @@ module backend (
 
     assign flush_due_to_branch = mispredict;
     assign flush_due_to_jump   = 0; 
-    assign flush_due_to_trap   = interrupt_enable || (id_ex_valid && id_ex_is_environment_call) || (id_ex_valid && id_ex_is_machine_return);
+    assign flush_due_to_trap   = trap_valid || mret_valid;
     assign halt_pipeline = halted_reg;
     assign halted = halted_reg;
 
@@ -448,7 +457,7 @@ module backend (
     assign mepc_forwarded  = (id_ex_valid && id_ex_csr_write_enable && (csr_write_address_execute == 12'h341)) ? csr_new_value : mepc;
 
     // Trap PC Logic
-    assign trap_pc = (interrupt_enable || (id_ex_valid && id_ex_is_environment_call)) ? mtvec_forwarded : mepc_forwarded;
+    assign trap_pc = trap_valid ? mtvec_forwarded : mepc_forwarded;
     assign pc_mux_select_trap = flush_due_to_trap;
 
     // EX/MEM Pipeline Register

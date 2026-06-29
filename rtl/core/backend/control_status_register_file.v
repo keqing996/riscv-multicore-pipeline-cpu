@@ -93,19 +93,8 @@ module control_status_register_file (
             mepc    <= 32'b0;
             mcause  <= 32'b0;
         end else begin
-            // Priority: Reset > Exception/Interrupt > Software Write
-            
-            if (timer_interrupt_fire) begin
-                mepc   <= exception_program_counter; // Save current PC (or next PC depending on arch)
-                mcause <= 32'h80000007; // Interrupt bit (31) + Cause 7 (Timer)
-                
-                // Disable Global Interrupts
-                // Save MIE to MPIE (Bit 7)
-                mstatus[7] <= mstatus[3];
-                // Clear MIE (Bit 3)
-                mstatus[3] <= 1'b0;
-            end
-            else if (exception_enable) begin
+            // Priority: Reset > Trap/MRET event from backend > Software Write
+            if (exception_enable) begin
                 mepc   <= exception_program_counter;
                 mcause <= exception_cause;
                 // Save MIE to MPIE

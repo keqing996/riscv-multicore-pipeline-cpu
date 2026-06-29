@@ -18,6 +18,8 @@ ChipTopTestbench tb;
         0x05500193, // ADDI x3, x0, 0x55
         0x3051a273, // CSRRS x4, mtvec, x3
         0x3051b2f3, // CSRRC x5, mtvec, x3
+        0x30502373, // CSRRS x6, mtvec, x0 (read only)
+        0x305033f3, // CSRRC x7, mtvec, x0 (read only)
         0x00100073, // EBREAK
     };
 
@@ -34,10 +36,14 @@ ChipTopTestbench tb;
     uint32_t x2 = tb.read_register(2);
     uint32_t x4 = tb.read_register(4);
     uint32_t x5 = tb.read_register(5);
+    uint32_t x6 = tb.read_register(6);
+    uint32_t x7 = tb.read_register(7);
     uint32_t mtvec = tb.read_csr_mtvec();
 
     CHECK(x2 == 0);
     CHECK(x4 == 0xAA);
     CHECK(x5 == 0xFF);
+    CHECK(x6 == 0xAA);
+    CHECK(x7 == 0xAA);
     CHECK(mtvec == 0xAA);
 }

@@ -13,7 +13,9 @@
 // ...
 // 0x20: CSRRS x2, mcause, x0 (Read mcause=11)
 // 0x24: CSRRS x3, mepc, x0   (Read mepc=0x8)
-// 0x28: EBREAK
+// 0x28: ADDI x4, x2, 1  (Use mcause immediately)
+// 0x2C: ADDI x5, x3, 4  (Use mepc immediately)
+// 0x30: EBREAK
 
 
 
@@ -31,18 +33,24 @@ ChipTopTestbench tb;
         0x00000013, // 0x1C: NOP
         0x34202173, // 0x20: CSRRS x2, mcause, x0 (Handler)
         0x341021f3, // 0x24: CSRRS x3, mepc, x0
-        0x00100073, // 0x28: EBREAK
+        0x00110213, // 0x28: ADDI x4, x2, 1
+        0x00418293, // 0x2C: ADDI x5, x3, 4
+        0x00100073, // 0x30: EBREAK
     };
 
     tb.load_program(program);
     tb.reset();
 
-    CHECK(tb.run_until_halted(100));
+    CHECK(tb.run_until_halted(200));
 
     // Verify Results
     uint32_t x2 = tb.read_register(2);
     uint32_t x3 = tb.read_register(3);
+    uint32_t x4 = tb.read_register(4);
+    uint32_t x5 = tb.read_register(5);
 
     CHECK(x2 == 11);
     CHECK(x3 == 0x8);
+    CHECK(x4 == 12);
+    CHECK(x5 == 0xC);
 }
