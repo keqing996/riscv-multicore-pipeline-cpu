@@ -41,4 +41,12 @@ module regfile (
                            (write_enable && (rs2_index == rd_index)) ? write_data : // Forwarding from WB
                            registers[rs2_index];
 
+`ifndef SYNTHESIS
+    always @(posedge clk) begin
+        assert (rs1_index != 5'b0 || rs1_read_data == 32'b0);
+        assert (rs2_index != 5'b0 || rs2_read_data == 32'b0);
+        assert (registers[0] == 32'b0);
+    end
+`endif
+
 endmodule

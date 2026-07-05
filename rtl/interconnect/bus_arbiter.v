@@ -177,4 +177,28 @@ module bus_arbiter (
         endcase
     end
 
+`ifndef SYNTHESIS
+    reg [1:0] owner_when_waiting;
+    reg       waiting_for_ready;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            owner_when_waiting <= OWNER_NONE;
+            waiting_for_ready <= 1'b0;
+        end else begin
+            if (waiting_for_ready) begin
+                assert (current_owner == owner_when_waiting);
+            end
+
+            if (bus_enable && !bus_ready && effective_owner != OWNER_NONE) begin
+                owner_when_waiting <= effective_owner;
+                waiting_for_ready <= 1'b1;
+            end else begin
+                owner_when_waiting <= OWNER_NONE;
+                waiting_for_ready <= 1'b0;
+            end
+        end
+    end
+`endif
+
 endmodule

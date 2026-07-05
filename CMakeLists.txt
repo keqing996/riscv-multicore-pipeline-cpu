@@ -10,6 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ENABLE_TRACE "Build Verilator VCD tracing support" OFF)
+option(ENABLE_ASSERTS "Enable Verilator assertion checks" ON)
 
 # Find Verilator
 find_package(verilator HINTS $ENV{VERILATOR_ROOT} /opt/homebrew)
@@ -30,8 +31,13 @@ set(RISCV_VERILATOR_ARGS
     -O3
     --x-assign fast
     --x-initial fast
-    --noassert
 )
+
+if(ENABLE_ASSERTS)
+    list(APPEND RISCV_VERILATOR_ARGS --assert)
+else()
+    list(APPEND RISCV_VERILATOR_ARGS --noassert)
+endif()
 
 if(ENABLE_TRACE)
     list(APPEND RISCV_VERILATOR_ARGS

@@ -128,9 +128,10 @@ public:
 // Utility functions
 namespace tb_util {
     // Random number generation
-    inline uint32_t random_uint32() {
-        return (rand() << 16) | rand();
-    }
+    uint32_t random_seed();
+    uint32_t random_uint32();
+    uint32_t random_range(uint32_t min, uint32_t max);
+    void init_random();
     
     // Convert nanoseconds to clock cycles
     inline uint64_t ns_to_cycles(uint64_t ns, uint32_t clk_period_ns) {

@@ -3,8 +3,6 @@
 #include "tb_base.h"
 #include "Valu.h"
 #include <iostream>
-#include <cstdlib>
-#include <ctime>
 
 // ALU Control Codes (must match RTL)
 const uint8_t ALU_ADD  = 0b0000;
@@ -190,7 +188,6 @@ TEST_CASE("ALU - LUI operations") {
 
 TEST_CASE("ALU - Random operations") {
     ALUTestbench tb;
-    srand(time(nullptr));
     
     const uint8_t ops[] = {
         ALU_ADD, ALU_SUB, ALU_SLL, ALU_SLT, ALU_SLTU,
@@ -200,7 +197,7 @@ TEST_CASE("ALU - Random operations") {
     for (int i = 0; i < 100; i++) {
         uint32_t a = tb_util::random_uint32();
         uint32_t b = tb_util::random_uint32();
-        uint8_t op = ops[rand() % (sizeof(ops) / sizeof(ops[0]))];
+        uint8_t op = ops[tb_util::random_range(0, (sizeof(ops) / sizeof(ops[0])) - 1)];
         
         uint32_t expected = tb.model_alu(a, b, op);
         uint32_t actual = tb.test_operation(a, b, op);

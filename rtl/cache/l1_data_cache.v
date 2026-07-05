@@ -263,4 +263,17 @@ module l1_data_cache (
         end
     end
 
+`ifndef SYNTHESIS
+    always @(*) begin
+        case (state)
+            STATE_FETCH_0: assert (mem_address == {request_address[31:4], 4'b0000});
+            STATE_FETCH_1: assert (mem_address == {request_address[31:4], 4'b0100});
+            STATE_FETCH_2: assert (mem_address == {request_address[31:4], 4'b1000});
+            STATE_FETCH_3: assert (mem_address == {request_address[31:4], 4'b1100});
+            default: begin
+            end
+        endcase
+    end
+`endif
+
 endmodule

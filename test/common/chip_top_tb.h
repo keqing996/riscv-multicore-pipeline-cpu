@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cstdint>
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -59,12 +60,55 @@ struct ChipTopSnapshot {
     }
 };
 
+struct CommitTraceEntry {
+    uint64_t cycle;
+    int hart;
+    uint32_t pc;
+    uint32_t instruction;
+    uint8_t rd;
+    bool rd_write_enable;
+    uint32_t rd_value;
+    bool mem_write_enable;
+    uint32_t mem_address;
+    uint32_t mem_write_data;
+    uint8_t mem_byte_enable;
+    bool trap;
+    bool mret;
+    bool halted;
+
+    bool interesting() const {
+        return rd_write_enable || mem_write_enable || trap || mret || halted;
+    }
+
+    std::string to_string() const {
+        std::ostringstream os;
+        os << "cycle=" << cycle
+           << " hart=" << hart
+           << " pc=0x" << std::hex << pc
+           << " instr=0x" << instruction
+           << " rd=x" << std::dec << static_cast<unsigned>(rd)
+           << " rd_we=" << rd_write_enable
+           << " rd_val=0x" << std::hex << rd_value
+           << " mem_we=" << std::dec << mem_write_enable
+           << " mem_addr=0x" << std::hex << mem_address
+           << " mem_wdata=0x" << mem_write_data
+           << " mem_be=0x" << static_cast<unsigned>(mem_byte_enable)
+           << std::dec
+           << " trap=" << trap
+           << " mret=" << mret
+           << " halted=" << halted;
+        return os.str();
+    }
+};
+
 class ChipTopTestbench : public ClockedTestbench<Vchip_top> {
 public:
     ChipTopTestbench(
         bool enable_trace = chip_top_trace_enabled_from_env(),
         const std::string& trace_filename = chip_top_trace_filename_from_env())
-        : ClockedTestbench<Vchip_top>(100, enable_trace, trace_filename) {
+        : ClockedTestbench<Vchip_top>(100, enable_trace, trace_filename),
+          checked_cycles(0),
+          trace_commits_enabled(commit_trace_enabled_from_env()) {
         dut->rst_n = 0;
     }
 
@@ -87,6 +131,8 @@ public:
         tick(reset_cycles);
         dut->rst_n = 1;
         tick(settle_cycles);
+        checked_cycles = 0;
+        recent_commits.clear();
     }
 
     void do_reset() {
@@ -94,14 +140,47 @@ public:
     }
 
     bool run_until_halted(int max_cycles) {
+        return run_until_halted_checked(max_cycles);
+    }
+
+    void tick_checked(int hart = 0) {
+        InvariantState before = capture_invariant_state(hart);
+        tick();
+        checked_cycles++;
+
+        CommitTraceEntry entry = capture_commit_trace(hart);
+        if (entry.interesting()) {
+            recent_commits.push_back(entry);
+            while (recent_commits.size() > kMaxRecentCommits) {
+                recent_commits.pop_front();
+            }
+            if (trace_commits_enabled) {
+                std::cout << entry.to_string() << std::endl;
+            }
+        }
+
+        check_invariants(hart, &before);
+    }
+
+    void tick_checked_cycles(int n, int hart = 0) {
+        for (int i = 0; i < n; i++) {
+            tick_checked(hart);
+        }
+    }
+
+    bool run_until_halted_checked(int max_cycles, int hart = 0) {
         for (int i = 0; i < max_cycles; i++) {
-            tick();
+            tick_checked(hart);
             if (is_halted()) {
                 return true;
             }
         }
         std::cerr << "Timed out waiting for halt: " << snapshot().to_string() << std::endl;
         return false;
+    }
+
+    void check_invariants(int hart = 0) {
+        check_invariants(hart, nullptr);
     }
 
     bool is_halted() const {
@@ -204,6 +283,10 @@ public:
         return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__if_id_instruction;
     }
 
+    bool get_if_id_valid() const {
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_frontend__DOT__if_id_valid;
+    }
+
     uint32_t get_instruction() const {
         return get_instruction_id();
     }
@@ -279,6 +362,205 @@ public:
     }
 
 private:
+    struct InvariantState {
+        ChipTopSnapshot snapshot;
+        bool if_id_valid;
+        bool rd_write_enable;
+        bool mem_write_enable;
+    };
+
+    static constexpr size_t kMaxRecentCommits = 16;
+
+    uint64_t checked_cycles;
+    bool trace_commits_enabled;
+    std::deque<CommitTraceEntry> recent_commits;
+
+    static bool commit_trace_enabled_from_env() {
+        const char* value = std::getenv("TRACE_COMMITS");
+        return value != nullptr && std::string(value) == "1";
+    }
+
+    InvariantState capture_invariant_state(int hart) const {
+        if (hart != 0) {
+            throw std::runtime_error("Checked chip_top invariants currently support hart 0 only");
+        }
+
+        return {
+            snapshot(),
+            get_if_id_valid(),
+            get_rd_write_enable(hart),
+            get_mem_write_enable(hart),
+        };
+    }
+
+    CommitTraceEntry capture_commit_trace(int hart) const {
+        if (hart != 0) {
+            throw std::runtime_error("Commit trace currently supports hart 0 only");
+        }
+
+        return {
+            checked_cycles,
+            hart,
+            get_commit_pc(hart),
+            get_commit_instruction(hart),
+            get_rd_index(hart),
+            get_rd_write_enable(hart),
+            get_rd_value(hart),
+            get_mem_write_enable(hart),
+            get_mem_address(hart),
+            get_mem_write_data(hart),
+            get_mem_byte_enable(hart),
+            get_trap_valid(hart),
+            get_mret_valid(hart),
+            is_halted(),
+        };
+    }
+
+    void check_invariants(int hart, const InvariantState* before) {
+        if (hart != 0) {
+            throw std::runtime_error("Checked chip_top invariants currently support hart 0 only");
+        }
+
+        const ChipTopSnapshot current = snapshot();
+
+        if (read_reg(hart, 0) != 0) {
+            fail_invariant("x0 changed", current);
+        }
+        if (!is_aligned_or_bubble(current.pc_if)) {
+            fail_invariant("IF PC is not 4-byte aligned", current);
+        }
+        if (!is_aligned_or_bubble(current.pc_id)) {
+            fail_invariant("IF/ID PC is not 4-byte aligned", current);
+        }
+        if (!is_aligned_or_bubble(current.pc_ex)) {
+            fail_invariant("ID/EX PC is not 4-byte aligned", current);
+        }
+
+        if (before == nullptr) {
+            return;
+        }
+
+        if (before->snapshot.halted &&
+            (get_rd_write_enable(hart) || get_mem_write_enable(hart))) {
+            fail_invariant("write observed after halt", current);
+        }
+
+        if ((before->snapshot.flush_branch || before->snapshot.flush_trap) && get_if_id_valid()) {
+            fail_invariant("IF/ID valid after branch/trap flush", current);
+        }
+
+        const bool previous_flush = before->snapshot.flush_branch ||
+                                    before->snapshot.flush_jump ||
+                                    before->snapshot.flush_trap;
+        const bool current_flush = current.flush_branch ||
+                                   current.flush_jump ||
+                                   current.flush_trap;
+        if (before->snapshot.stall_backend && !previous_flush && !current_flush &&
+            (current.pc_id != before->snapshot.pc_id ||
+             current.instruction_id != before->snapshot.instruction_id)) {
+            fail_invariant("IF/ID changed while backend was stalled", current);
+        }
+    }
+
+    static bool is_aligned_or_bubble(uint32_t pc) {
+        return pc == 0 || (pc & 0x3u) == 0;
+    }
+
+    void fail_invariant(const std::string& message, const ChipTopSnapshot& current) const {
+        std::ostringstream os;
+        os << "Invariant failed: " << message
+           << " TEST_SEED=0x" << std::hex << tb_util::random_seed()
+           << std::dec << " " << current.to_string();
+
+        if (!recent_commits.empty()) {
+            os << "\nRecent commits:";
+            for (const CommitTraceEntry& entry : recent_commits) {
+                os << "\n  " << entry.to_string();
+            }
+        }
+
+        throw std::runtime_error(os.str());
+    }
+
+    bool get_rd_write_enable(int hart) const {
+        if (hart != 0) {
+            return false;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mem_wb_valid &&
+               dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mem_wb_register_write_enable &&
+               dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mem_wb_rd_index != 0;
+    }
+
+    uint8_t get_rd_index(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mem_wb_rd_index;
+    }
+
+    uint32_t get_rd_value(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__write_data_writeback;
+    }
+
+    uint32_t get_commit_pc(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mem_wb_program_counter;
+    }
+
+    uint32_t get_commit_instruction(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mem_wb_instruction;
+    }
+
+    bool get_mem_write_enable(int hart) const {
+        if (hart != 0) {
+            return false;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__bus_write_enable;
+    }
+
+    uint32_t get_mem_address(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__bus_address;
+    }
+
+    uint32_t get_mem_write_data(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__bus_write_data;
+    }
+
+    uint8_t get_mem_byte_enable(int hart) const {
+        if (hart != 0) {
+            return 0;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__bus_byte_enable;
+    }
+
+    bool get_trap_valid(int hart) const {
+        if (hart != 0) {
+            return false;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__trap_valid;
+    }
+
+    bool get_mret_valid(int hart) const {
+        if (hart != 0) {
+            return false;
+        }
+        return dut->rootp->chip_top__DOT__u_tile_0__DOT__u_core__DOT__u_backend__DOT__mret_valid;
+    }
+
     static std::vector<uint32_t> read_binary_words(const std::string& bin_path) {
         std::ifstream file(bin_path, std::ios::binary | std::ios::ate);
         if (!file.is_open()) {

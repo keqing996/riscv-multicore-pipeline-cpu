@@ -90,6 +90,7 @@ module backend (
     // --- ID/EX Pipeline Registers ---
     reg id_ex_valid;
     // id_ex_program_counter is output
+    reg [31:0] id_ex_instruction;
     reg id_ex_prediction_taken;
     reg [31:0] id_ex_prediction_target;
     reg [31:0] id_ex_rs1_data;
@@ -130,6 +131,8 @@ module backend (
 
     // --- EX/MEM Pipeline Registers ---
     reg ex_mem_valid;
+    reg [31:0] ex_mem_program_counter;
+    reg [31:0] ex_mem_instruction;
     reg [31:0] ex_mem_alu_result;
     reg [31:0] ex_mem_rs2_data;
     reg [4:0]  ex_mem_rd_index;
@@ -150,6 +153,8 @@ module backend (
 
     // --- MEM/WB Pipeline Registers ---
     reg mem_wb_valid;
+    reg [31:0] mem_wb_program_counter;
+    reg [31:0] mem_wb_instruction;
     reg [31:0] mem_wb_read_data;
     reg [31:0] mem_wb_alu_result;
     reg [4:0]  mem_wb_rd_index;
@@ -271,6 +276,7 @@ module backend (
         if (!rst_n) begin
             id_ex_valid <= 0;
             id_ex_program_counter <= 0;
+            id_ex_instruction <= 0;
             id_ex_prediction_taken <= 0;
             id_ex_prediction_target <= 0;
             id_ex_rs1_data <= 0;
@@ -318,9 +324,11 @@ module backend (
             id_ex_prediction_taken <= 0;
             id_ex_prediction_target <= 0;
             id_ex_program_counter <= 0; 
+            id_ex_instruction <= 0;
         end else begin
             id_ex_valid <= instruction_grant;
             id_ex_program_counter <= if_id_program_counter;
+            id_ex_instruction <= if_id_instruction;
             id_ex_prediction_taken <= if_id_prediction_taken;
             id_ex_prediction_target <= if_id_prediction_target;
             id_ex_rs1_data <= rs1_data_decode;
@@ -466,6 +474,8 @@ module backend (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             ex_mem_valid <= 0;
+            ex_mem_program_counter <= 0;
+            ex_mem_instruction <= 0;
             ex_mem_alu_result <= 0;
             ex_mem_rs2_data <= 0;
             ex_mem_rd_index <= 0;
@@ -482,6 +492,8 @@ module backend (
         end else if (mdu_stall) begin
             // Insert Bubble (NOP) while MDU is busy/not ready
             ex_mem_valid <= 0;
+            ex_mem_program_counter <= 0;
+            ex_mem_instruction <= 0;
             ex_mem_memory_read_enable <= 0;
             ex_mem_memory_write_enable <= 0;
             ex_mem_register_write_enable <= 0;
@@ -495,6 +507,8 @@ module backend (
             ex_mem_is_breakpoint <= 0;
         end else begin
             ex_mem_valid <= id_ex_valid;
+            ex_mem_program_counter <= id_ex_program_counter;
+            ex_mem_instruction <= id_ex_instruction;
             ex_mem_alu_result <= alu_result_execute;
             ex_mem_rs2_data <= forward_b_value;
             ex_mem_rd_index <= id_ex_rd_index;
@@ -533,6 +547,8 @@ module backend (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             mem_wb_valid <= 0;
+            mem_wb_program_counter <= 0;
+            mem_wb_instruction <= 0;
             mem_wb_read_data <= 0;
             mem_wb_alu_result <= 0;
             mem_wb_rd_index <= 0;
@@ -545,6 +561,8 @@ module backend (
             // Stall MEM/WB (Hold value)
         end else begin
             mem_wb_valid <= ex_mem_valid;
+            mem_wb_program_counter <= ex_mem_program_counter;
+            mem_wb_instruction <= ex_mem_instruction;
             mem_wb_read_data <= memory_read_data_final;
             mem_wb_alu_result <= ex_mem_alu_result;
             mem_wb_rd_index <= ex_mem_rd_index;
@@ -571,5 +589,14 @@ module backend (
     assign write_data_writeback = mem_wb_csr_to_register_select ? mem_wb_csr_read_data :
                       mem_wb_memory_to_register_select ? mem_wb_read_data : 
                       mem_wb_alu_result;
+
+`ifndef SYNTHESIS
+    always @(posedge clk) begin
+        if (halted_reg) begin
+            assert (!(mem_wb_valid && mem_wb_register_write_enable && (mem_wb_rd_index != 5'b0)));
+            assert (!bus_write_enable);
+        end
+    end
+`endif
 
 endmodule
